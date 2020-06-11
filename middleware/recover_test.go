@@ -10,10 +10,10 @@ import (
 )
 
 func TestRecover(t *testing.T) {
-	e := gig.New()
+	g := gig.New()
 	buf := new(bytes.Buffer)
-	e.Logger.SetOutput(buf)
-	c, rec := gigtest.NewContext(e, "/", nil)
+	g.Logger.SetOutput(buf)
+	c, rec := gigtest.NewContext(g, "/", nil)
 	h := Recover()(gig.HandlerFunc(func(c gig.Context) error {
 		panic("test")
 	}))
@@ -23,10 +23,10 @@ func TestRecover(t *testing.T) {
 }
 
 func TestRecover_Defaults(t *testing.T) {
-	e := gig.New()
+	g := gig.New()
 	buf := new(bytes.Buffer)
-	e.Logger.SetOutput(buf)
-	c, rec := gigtest.NewContext(e, "/", nil)
+	g.Logger.SetOutput(buf)
+	c, rec := gigtest.NewContext(g, "/", nil)
 	h := RecoverWithConfig(RecoverConfig{})(gig.HandlerFunc(func(c gig.Context) error {
 		panic("test")
 	}))

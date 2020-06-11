@@ -1,7 +1,6 @@
 package gig
 
 import (
-	"bytes"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -222,11 +221,10 @@ func (c *context) Render(code Status, name string, data interface{}) (err error)
 	if c.gig.Renderer == nil {
 		return ErrRendererNotRegistered
 	}
-	buf := new(bytes.Buffer)
-	if err = c.gig.Renderer.Render(buf, name, data, c); err != nil {
+	if err = c.response.WriteHeader(code, MIMETextGeminiCharsetUTF8); err != nil {
 		return
 	}
-	return c.GeminiBlob(code, buf.Bytes())
+	return c.gig.Renderer.Render(c.response, name, data, c)
 }
 
 func (c *context) Gemini(code Status, text string) (err error) {

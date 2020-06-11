@@ -34,19 +34,19 @@ import (
 
 func main() {
   // Gig instance
-  e := gig.New()
+  g := gig.New()
 
   // Middleware
-  e.Use(middleware.Logger())
-  e.Use(middleware.Recover())
+  g.Use(middleware.Logger())
+  g.Use(middleware.Recover())
 
   // Routes
-  e.Handle("/", hello)
+  g.Handle("/", hello)
 
   // Start server
-  e.Logger.Fatal(e.StartTLS(":1965", "cert.pem", "key.pem"))
+  g.Logger.Fatal(g.StartTLS(":1965", "cert.pem", "key.pem"))
   // or use automatic certificates installed from https://letsencrypt.org.
-  // e.Logger.Fatal(e.StartAutoTLS(":1965"))
+  // g.Logger.Fatal(g.StartAutoTLS(":1965"))
 }
 
 // Handler

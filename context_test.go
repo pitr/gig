@@ -278,11 +278,11 @@ func TestContext_JSON_HandlesBadJSON(t *testing.T) {
 }
 
 func TestContextPath(t *testing.T) {
-	e := New()
-	r := e.Router()
+	g := New()
+	r := g.Router()
 
 	r.Add("/users/:id", nil)
-	c := e.NewContext(nil, nil, "", nil)
+	c := g.NewContext(nil, nil, "", nil)
 	r.Find("/users/1", c)
 
 	assert := testify.New(t)
@@ -290,15 +290,15 @@ func TestContextPath(t *testing.T) {
 	assert.Equal("/users/:id", c.Path())
 
 	r.Add("/users/:uid/files/:fid", nil)
-	c = e.NewContext(nil, nil, "", nil)
+	c = g.NewContext(nil, nil, "", nil)
 	r.Find("/users/1/files/1", c)
 	assert.Equal("/users/:uid/files/:fid", c.Path())
 }
 
 func TestContextRequestURI(t *testing.T) {
-	e := New()
+	g := New()
 
-	c := e.NewContext(nil, nil, "/my-uri", nil)
+	c := g.NewContext(nil, nil, "/my-uri", nil)
 
 	assert := testify.New(t)
 
@@ -306,8 +306,8 @@ func TestContextRequestURI(t *testing.T) {
 }
 
 func TestContextGetParam(t *testing.T) {
-	e := New()
-	r := e.Router()
+	g := New()
+	r := g.Router()
 	r.Add("/:foo", func(Context) error { return nil })
 	c := newContext("/bar")
 
@@ -335,10 +335,10 @@ func TestContextStore(t *testing.T) {
 }
 
 func BenchmarkContext_Store(b *testing.B) {
-	e := &Gig{}
+	g := &Gig{}
 
 	c := &context{
-		gig: e,
+		gig: g,
 	}
 
 	for n := 0; n < b.N; n++ {
@@ -350,15 +350,15 @@ func BenchmarkContext_Store(b *testing.B) {
 }
 
 func TestContextHandler(t *testing.T) {
-	e := New()
-	r := e.Router()
+	g := New()
+	r := g.Router()
 	b := new(bytes.Buffer)
 
 	r.Add("/handler", func(Context) error {
 		_, err := b.Write([]byte("handler"))
 		return err
 	})
-	c := e.NewContext(nil, nil, "", nil)
+	c := g.NewContext(nil, nil, "", nil)
 	r.Find("/handler", c)
 	err := c.Handler()(c)
 	testify.Equal(t, "handler", b.String())

@@ -6,8 +6,7 @@ import (
 )
 
 type (
-	// Response wraps an io.Conn and implements its interface to be used
-	// by a handler to construct a response.
+	// Response wraps net.Conn, to be used by a context to construct a response.
 	Response struct {
 		logger    Logger
 		Writer    io.Writer

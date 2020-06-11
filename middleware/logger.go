@@ -60,7 +60,7 @@ var (
 	// DefaultLoggerConfig is the default Logger middleware config.
 	DefaultLoggerConfig = LoggerConfig{
 		Skipper:          DefaultSkipper,
-		Format:           `path=${path} status=${status} duration=${latency} ${error}\n`,
+		Format:           "path=${path} status=${status} duration=${latency} ${error}\n",
 		CustomTimeFormat: "2006-01-02 15:04:05.00000",
 		colorer:          color.New(),
 	}

@@ -35,68 +35,68 @@ const userXMLPretty = `<user>
 </user>`
 
 func TestGig(t *testing.T) {
-	e := New()
+	g := New()
 	c := newContext("/").(*context)
 
 	// Router
-	assert.NotNil(t, e.Router())
+	assert.NotNil(t, g.Router())
 
 	// DefaultGeminiErrorHandler
-	e.DefaultGeminiErrorHandler(errors.New("error"), c)
+	g.DefaultGeminiErrorHandler(errors.New("error"), c)
 	assert.Equal(t, "50 error\r\n", c.conn.(*fakeConn).Written)
 }
 
 func TestGigStatic(t *testing.T) {
-	e := New()
+	g := New()
 
 	assert := assert.New(t)
 
 	// OK
-	e.Static("/images", "_fixture/images")
-	b := request("/images/walle.png", e)
+	g.Static("/images", "_fixture/images")
+	b := request("/images/walle.png", g)
 	assert.Equal(true, strings.HasPrefix(b, "20 image/png\r\n"))
 
 	// No file
-	e.Static("/images", "_fixture/scripts")
-	b = request("/images/bolt.png", e)
+	g.Static("/images", "_fixture/scripts")
+	b = request("/images/bolt.png", g)
 	assert.Equal("51 Not Found\r\n", b)
 
 	// Directory
-	e.Static("/images", "_fixture/images")
-	b = request("/images", e)
+	g.Static("/images", "_fixture/images")
+	b = request("/images", g)
 	assert.Equal("51 Not Found\r\n", b)
 
 	// Directory with index.gmi
-	e.Static("/", "_fixture")
-	b = request("/", e)
+	g.Static("/", "_fixture")
+	b = request("/", g)
 	assert.Equal("20 text/gemini\r\n# Hello from gig\n\n=> / 🏠 Home\n", b)
 
 	// Sub-directory with index.gmi
-	b = request("/folder", e)
+	b = request("/folder", g)
 	assert.Equal("20 text/gemini\r\n# Listing _fixture/folder\n\n=> /*/about.gmi about.gmi [ 29B ]\n=> /*/another.blah another.blah [ 14B ]\n", b)
 
 	// File without known mime
-	b = request("/folder/another.blah", e)
+	b = request("/folder/another.blah", g)
 	assert.Equal("20 octet/stream\r\n# Another page", b)
 
 	// Escape
-	e.Static("/escape", "")
-	b = request("/escape/../../", e)
+	g.Static("/escape", "")
+	b = request("/escape/../../", g)
 	assert.Equal(true, strings.Contains(b, "/escape/*/gig.go"))
 }
 
 func TestGigFile(t *testing.T) {
-	e := New()
-	e.File("/walle", "_fixture/images/walle.png")
-	b := request("/walle", e)
+	g := New()
+	g.File("/walle", "_fixture/images/walle.png")
+	b := request("/walle", g)
 	assert.Equal(t, true, strings.HasPrefix(b, "20 "))
 }
 
 func TestGigMiddleware(t *testing.T) {
-	e := New()
+	g := New()
 	buf := new(bytes.Buffer)
 
-	e.Pre(func(next HandlerFunc) HandlerFunc {
+	g.Pre(func(next HandlerFunc) HandlerFunc {
 		return func(c Context) error {
 			assert.Empty(t, c.Path())
 			buf.WriteString("-1")
@@ -104,21 +104,21 @@ func TestGigMiddleware(t *testing.T) {
 		}
 	})
 
-	e.Use(func(next HandlerFunc) HandlerFunc {
+	g.Use(func(next HandlerFunc) HandlerFunc {
 		return func(c Context) error {
 			buf.WriteString("1")
 			return next(c)
 		}
 	})
 
-	e.Use(func(next HandlerFunc) HandlerFunc {
+	g.Use(func(next HandlerFunc) HandlerFunc {
 		return func(c Context) error {
 			buf.WriteString("2")
 			return next(c)
 		}
 	})
 
-	e.Use(func(next HandlerFunc) HandlerFunc {
+	g.Use(func(next HandlerFunc) HandlerFunc {
 		return func(c Context) error {
 			buf.WriteString("3")
 			return next(c)
@@ -126,70 +126,70 @@ func TestGigMiddleware(t *testing.T) {
 	})
 
 	// Route
-	e.Handle("/", func(c Context) error {
+	g.Handle("/", func(c Context) error {
 		return c.Text(StatusSuccess, "OK")
 	})
 
-	b := request("/", e)
+	b := request("/", g)
 	assert.Equal(t, "-1123", buf.String())
 	assert.Equal(t, "20 text/plain; charset=UTF-8\r\nOK", b)
 }
 
 func TestGigMiddlewareError(t *testing.T) {
-	e := New()
-	e.Use(func(next HandlerFunc) HandlerFunc {
+	g := New()
+	g.Use(func(next HandlerFunc) HandlerFunc {
 		return func(c Context) error {
 			return NewGeminiErrorFrom(ErrPermanentFailure, "oops")
 		}
 	})
-	e.Handle("/", NotFoundHandler)
-	b := request("/", e)
+	g.Handle("/", NotFoundHandler)
+	b := request("/", g)
 	assert.Equal(t, "50 oops\r\n", b)
 }
 
 func TestGigHandler(t *testing.T) {
-	e := New()
+	g := New()
 
 	// HandlerFunc
-	e.Handle("/ok", func(c Context) error {
+	g.Handle("/ok", func(c Context) error {
 		return c.Text(StatusSuccess, "OK")
 	})
 
-	b := request("/ok", e)
+	b := request("/ok", g)
 	assert.Equal(t, "20 text/plain; charset=UTF-8\r\nOK", b)
 }
 
 func TestGigHandle(t *testing.T) {
-	e := New()
-	e.Handle("/", func(c Context) error {
+	g := New()
+	g.Handle("/", func(c Context) error {
 		return c.Text(StatusSuccess, "hello")
 	})
-	b := request("/", e)
+	b := request("/", g)
 	assert.Equal(t, "20 text/plain; charset=UTF-8\r\nhello", b)
 }
 
 func TestGigURL(t *testing.T) {
-	e := New()
+	g := New()
 	static := func(Context) error { return nil }
 	getUser := func(Context) error { return nil }
 	getFile := func(Context) error { return nil }
 
-	e.Handle("/static/file", static)
-	e.Handle("/users/:id", getUser)
-	g := e.Group("/group")
-	g.Handle("/users/:uid/files/:fid", getFile)
+	g.Handle("/static/file", static)
+	g.Handle("/users/:id", getUser)
+	gr := g.Group("/group")
+	gr.Handle("/users/:uid/files/:fid", getFile)
 
 	assert := assert.New(t)
 
-	assert.Equal("/static/file", e.URL(static))
-	assert.Equal("/users/:id", e.URL(getUser))
-	assert.Equal("/users/1", e.URL(getUser, "1"))
-	assert.Equal("/group/users/1/files/:fid", e.URL(getFile, "1"))
-	assert.Equal("/group/users/1/files/1", e.URL(getFile, "1", "1"))
+	assert.Equal("/static/file", g.URL(static))
+	assert.Equal("/users/:id", g.URL(getUser))
+	assert.Equal("/users/1", g.URL(getUser, "1"))
+	assert.Equal("/group/users/1/files/:fid", g.URL(getFile, "1"))
+	assert.Equal("/group/users/1/files/1", g.URL(getFile, "1", "1"))
 }
 
 func TestGigRoutes(t *testing.T) {
-	e := New()
+	g := New()
 	routes := []*Route{
 		{"/users/:user/events", ""},
 		{"/users/:user/events/public", ""},
@@ -197,13 +197,13 @@ func TestGigRoutes(t *testing.T) {
 		{"/repos/:owner/:repo/git/tags", ""},
 	}
 	for _, r := range routes {
-		e.Handle(r.Path, func(c Context) error {
+		g.Handle(r.Path, func(c Context) error {
 			return c.Text(StatusSuccess, "OK")
 		})
 	}
 
-	if assert.Equal(t, len(routes), len(e.Routes())) {
-		for _, r := range e.Routes() {
+	if assert.Equal(t, len(routes), len(g.Routes())) {
+		for _, r := range g.Routes() {
 			found := false
 			for _, rr := range routes {
 				if r.Path == rr.Path {
@@ -219,19 +219,19 @@ func TestGigRoutes(t *testing.T) {
 }
 
 func TestGigEncodedPath(t *testing.T) {
-	e := New()
-	e.Handle("/:id", func(c Context) error {
+	g := New()
+	g.Handle("/:id", func(c Context) error {
 		return c.NoContentSuccess()
 	})
 	c := newContext("/with%2Fslash")
-	e.ServeGemini(c)
+	g.ServeGemini(c)
 	assert.Equal(t, "20 text/gemini\r\n", c.(*context).conn.(*fakeConn).Written)
 }
 
 func TestGigGroup(t *testing.T) {
-	e := New()
+	g := New()
 	buf := new(bytes.Buffer)
-	e.Use(MiddlewareFunc(func(next HandlerFunc) HandlerFunc {
+	g.Use(MiddlewareFunc(func(next HandlerFunc) HandlerFunc {
 		return func(c Context) error {
 			buf.WriteString("0")
 			return next(c)
@@ -245,10 +245,10 @@ func TestGigGroup(t *testing.T) {
 	// Routes
 	//--------
 
-	e.Handle("/users", h)
+	g.Handle("/users", h)
 
 	// Group
-	g1 := e.Group("/group1")
+	g1 := g.Group("/group1")
 	g1.Use(func(next HandlerFunc) HandlerFunc {
 		return func(c Context) error {
 			buf.WriteString("1")
@@ -258,7 +258,7 @@ func TestGigGroup(t *testing.T) {
 	g1.Handle("", h)
 
 	// Nested groups with middleware
-	g2 := e.Group("/group2")
+	g2 := g.Group("/group2")
 	g2.Use(func(next HandlerFunc) HandlerFunc {
 		return func(c Context) error {
 			buf.WriteString("2")
@@ -274,45 +274,45 @@ func TestGigGroup(t *testing.T) {
 	})
 	g3.Handle("", h)
 
-	request("/users", e)
+	request("/users", g)
 	assert.Equal(t, "0", buf.String())
 
 	buf.Reset()
-	request("/group1", e)
+	request("/group1", g)
 	assert.Equal(t, "01", buf.String())
 
 	buf.Reset()
-	request("/group2/group3", e)
+	request("/group2/group3", g)
 	assert.Equal(t, "023", buf.String())
 }
 
 func TestGigNotFound(t *testing.T) {
-	e := New()
+	g := New()
 	c := newContext("/files").(*context)
-	e.ServeGemini(c)
+	g.ServeGemini(c)
 	assert.Equal(t, "51 Not Found\r\n", c.conn.(*fakeConn).Written)
 }
 
 func TestGigContext(t *testing.T) {
-	e := New()
-	c := e.AcquireContext()
+	g := New()
+	c := g.AcquireContext()
 	assert.IsType(t, new(context), c)
-	e.ReleaseContext(c)
+	g.ReleaseContext(c)
 }
 
 func TestGigStartTLS(t *testing.T) {
-	e := New()
+	g := New()
 	go func() {
-		_ = e.StartTLS(":0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
+		_ = g.StartTLS(":0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
 	}()
 	time.Sleep(200 * time.Millisecond)
 
-	e.Close()
+	g.Close()
 }
 
 func TestGigStartTLS_BadAddress(t *testing.T) {
-	e := New()
-	err := e.StartTLS("garbage address", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
+	g := New()
+	err := g.StartTLS("garbage address", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "address garbage address: missing port in address")
 }
@@ -372,11 +372,11 @@ func TestGigStartTLSByteString(t *testing.T) {
 	for _, test := range testCases {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
-			e := New()
-			e.HideBanner = true
+			g := New()
+			g.HideBanner = true
 
 			go func() {
-				err := e.StartTLS(":0", test.cert, test.key)
+				err := g.StartTLS(":0", test.cert, test.key)
 				if test.expectedErr != nil {
 					require.EqualError(t, err, test.expectedErr.Error())
 				} else if err != ErrServerClosed { // Prevent the test to fail after closing the servers
@@ -385,17 +385,17 @@ func TestGigStartTLSByteString(t *testing.T) {
 			}()
 			time.Sleep(200 * time.Millisecond)
 
-			e.Close()
+			g.Close()
 		})
 	}
 }
 
 func TestGigStartAutoTLS(t *testing.T) {
-	e := New()
+	g := New()
 	errChan := make(chan error)
 
 	go func() {
-		errChan <- e.StartAutoTLS(":0")
+		errChan <- g.StartAutoTLS(":0")
 	}()
 	time.Sleep(200 * time.Millisecond)
 
@@ -403,13 +403,13 @@ func TestGigStartAutoTLS(t *testing.T) {
 	case err := <-errChan:
 		assert.NoError(t, err)
 	default:
-		assert.NoError(t, e.Close())
+		assert.NoError(t, g.Close())
 	}
 }
 
-func request(path string, e *Gig) string {
+func request(path string, g *Gig) string {
 	c := newContext(path).(*context)
-	e.ServeGemini(c)
+	g.ServeGemini(c)
 	return c.conn.(*fakeConn).Written
 }
 
@@ -430,20 +430,20 @@ func TestGeminiError(t *testing.T) {
 }
 
 func TestGigClose(t *testing.T) {
-	e := New()
+	g := New()
 	errCh := make(chan error)
 
 	go func() {
-		errCh <- e.StartTLS(":0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
+		errCh <- g.StartTLS(":0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
 	}()
 
 	time.Sleep(200 * time.Millisecond)
 
-	if err := e.Close(); err != nil {
+	if err := g.Close(); err != nil {
 		t.Fatal(err)
 	}
 
-	assert.Contains(t, e.Close().Error(), "use of closed network connection")
+	assert.Contains(t, g.Close().Error(), "use of closed network connection")
 
 	err := <-errCh
 	assert.Equal(t, err.Error(), "gemini: Server closed")

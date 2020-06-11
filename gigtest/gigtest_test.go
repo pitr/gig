@@ -10,9 +10,9 @@ import (
 
 func TestNewContext(t *testing.T) {
 	assert := assert.New(t)
-	e := gig.New()
+	g := gig.New()
 
-	c, conn := NewContext(e, "/login", nil)
+	c, conn := NewContext(g, "/login", nil)
 
 	assert.NoError(c.Response().WriteHeader(gig.StatusGone, "oops"))
 	assert.Equal("52 oops\r\n", conn.Written)

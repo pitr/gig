@@ -38,11 +38,11 @@ func (c *FakeConn) SetDeadline(t time.Time) error      { return nil }
 func (c *FakeConn) SetReadDeadline(t time.Time) error  { return nil }
 func (c *FakeConn) SetWriteDeadline(t time.Time) error { return nil }
 
-func NewContext(e *gig.Gig, uri string, tlsState *tls.ConnectionState) (gig.Context, *FakeConn) {
+func NewContext(g *gig.Gig, uri string, tlsState *tls.ConnectionState) (gig.Context, *FakeConn) {
 	u, err := url.Parse(uri)
 	if err != nil {
 		panic(err)
 	}
 	conn := &FakeConn{}
-	return e.NewContext(conn, u, uri, tlsState), conn
+	return g.NewContext(conn, u, uri, tlsState), conn
 }

@@ -33,11 +33,11 @@ const (
 )
 
 // NewRouter returns a new Router instance.
-func NewRouter(e *Gig) *Router {
+func NewRouter(g *Gig) *Router {
 	return &Router{
 		tree:   &node{},
 		routes: map[string]*Route{},
-		gig:    e,
+		gig:    g,
 	}
 }
 

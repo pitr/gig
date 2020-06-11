@@ -17,20 +17,20 @@ func TestGroup(t *testing.T) {
 }
 
 func TestGroupFile(t *testing.T) {
-	e := New()
-	g := e.Group("/group")
+	gig := New()
+	g := gig.Group("/group")
 	g.File("/walle", "_fixture/images/walle.png")
 	expectedData, err := ioutil.ReadFile("_fixture/images/walle.png")
 	assert.Nil(t, err)
 	c := newContext("/group/walle")
-	e.ServeGemini(c)
+	gig.ServeGemini(c)
 	assert.Equal(t, "20 image/png\r\n"+string(expectedData), c.(*context).conn.(*fakeConn).Written)
 }
 
 func TestGroupRouteMiddleware(t *testing.T) {
 	// Ensure middleware slices are not re-used
-	e := New()
-	g := e.Group("/group")
+	gig := New()
+	g := gig.Group("/group")
 	h := func(Context) error { return nil }
 	m1 := func(next HandlerFunc) HandlerFunc {
 		return func(c Context) error {
@@ -61,16 +61,16 @@ func TestGroupRouteMiddleware(t *testing.T) {
 	g.Handle("/40_1", h, m4)
 	g.Handle("/40_2", h, m5)
 
-	b := request("/group/40_1", e)
+	b := request("/group/40_1", gig)
 	assert.Equal(t, "40 oops\r\n", b)
-	b = request("/group/40_2", e)
+	b = request("/group/40_2", gig)
 	assert.Equal(t, "40 another\r\n", b)
 }
 
 func TestGroupRouteMiddlewareWithMatchAny(t *testing.T) {
 	// Ensure middleware and match any routes do not conflict
-	e := New()
-	g := e.Group("/group")
+	gig := New()
+	g := gig.Group("/group")
 	m1 := func(next HandlerFunc) HandlerFunc {
 		return func(c Context) error {
 			return next(c)
@@ -88,20 +88,20 @@ func TestGroupRouteMiddlewareWithMatchAny(t *testing.T) {
 	g.Handle("/help", h, m2)
 	g.Handle("/*", h, m2)
 	g.Handle("", h, m2)
-	e.Handle("unrelated", h, m2)
-	e.Handle("*", h, m2)
+	gig.Handle("unrelated", h, m2)
+	gig.Handle("*", h, m2)
 
-	b := request("/group/help", e)
+	b := request("/group/help", gig)
 	assert.Equal(t, "20 text/plain; charset=UTF-8\r\n/group/help", b)
-	b = request("/group/help/other", e)
+	b = request("/group/help/other", gig)
 	assert.Equal(t, "20 text/plain; charset=UTF-8\r\n/group/*", b)
-	b = request("/group/404", e)
+	b = request("/group/404", gig)
 	assert.Equal(t, "20 text/plain; charset=UTF-8\r\n/group/*", b)
-	b = request("/group", e)
+	b = request("/group", gig)
 	assert.Equal(t, "20 text/plain; charset=UTF-8\r\n/group", b)
-	b = request("/other", e)
+	b = request("/other", gig)
 	assert.Equal(t, "20 text/plain; charset=UTF-8\r\n/*", b)
-	b = request("/", e)
+	b = request("/", gig)
 	assert.Equal(t, "20 text/plain; charset=UTF-8\r\n", b)
 
 }

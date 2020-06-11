@@ -15,8 +15,8 @@ import (
 
 func TestLogger(t *testing.T) {
 	// Note: Just for the test coverage, not a real test.
-	e := gig.New()
-	c, _ := gigtest.NewContext(e, "/", nil)
+	g := gig.New()
+	c, _ := gigtest.NewContext(g, "/", nil)
 
 	h := Logger()(func(c gig.Context) error {
 		return c.Gemini(gig.StatusSuccess, "test")
@@ -26,28 +26,28 @@ func TestLogger(t *testing.T) {
 	assert.Nil(t, h(c))
 
 	// Status 3x
-	c, _ = gigtest.NewContext(e, "/", nil)
+	c, _ = gigtest.NewContext(g, "/", nil)
 	h = Logger()(func(c gig.Context) error {
 		return c.NoContent(gig.StatusRedirectTemporary, "test")
 	})
 	assert.Nil(t, h(c))
 
 	// Status 4x
-	c, _ = gigtest.NewContext(e, "/", nil)
+	c, _ = gigtest.NewContext(g, "/", nil)
 	h = Logger()(func(c gig.Context) error {
 		return c.NoContent(gig.StatusSlowDown, "test")
 	})
 	assert.Nil(t, h(c))
 
 	// Status 5x with empty path
-	c, _ = gigtest.NewContext(e, "/", nil)
+	c, _ = gigtest.NewContext(g, "/", nil)
 	h = Logger()(func(c gig.Context) error {
 		return errors.New("error")
 	})
 	assert.Nil(t, h(c))
 
 	// Status 6x with empty path
-	c, _ = gigtest.NewContext(e, "/", nil)
+	c, _ = gigtest.NewContext(g, "/", nil)
 	h = Logger()(func(c gig.Context) error {
 		return c.NoContent(gig.StatusTransientCertificateRequested, "test")
 	})
@@ -57,8 +57,8 @@ func TestLogger(t *testing.T) {
 func TestLoggerTemplate(t *testing.T) {
 	buf := new(bytes.Buffer)
 
-	e := gig.New()
-	e.Use(LoggerWithConfig(LoggerConfig{
+	g := gig.New()
+	g.Use(LoggerWithConfig(LoggerConfig{
 		Format: `{"time":"${time_rfc3339_nano}","time_unix":"${time_unix}",` +
 			`"time_unix_nano":"${time_unix_nano}","time_rfc3339":"${time_rfc3339}",` +
 			`"id":"${id}","remote_ip":"${remote_ip}","host":"${host}",` +
@@ -68,12 +68,12 @@ func TestLoggerTemplate(t *testing.T) {
 		Output: buf,
 	}))
 
-	e.Handle("/login", func(c gig.Context) error {
+	g.Handle("/login", func(c gig.Context) error {
 		return c.Gemini(gig.StatusSuccess, "Header Logged")
 	})
 
-	c, _ := gigtest.NewContext(e, "/login?username=apagano-param&password=secret", nil)
-	e.ServeGemini(c)
+	c, _ := gigtest.NewContext(g, "/login?username=apagano-param&password=secret", nil)
+	g.ServeGemini(c)
 
 	cases := map[string]bool{
 		"apagano-param":               true,
@@ -97,8 +97,8 @@ func TestLoggerTemplate(t *testing.T) {
 func TestLoggerCustomTimestamp(t *testing.T) {
 	buf := new(bytes.Buffer)
 	customTimeFormat := "2006-01-02 15:04:05.00000"
-	e := gig.New()
-	e.Use(LoggerWithConfig(LoggerConfig{
+	g := gig.New()
+	g.Use(LoggerWithConfig(LoggerConfig{
 		Format: `{"time":"${time_custom}","id":"${id}","remote_ip":"${remote_ip}","host":"${host}","user_agent":"${user_agent}",` +
 			`"method":"${method}","uri":"${uri}","status":${status}, "latency":${latency},` +
 			`"latency_human":"${latency_human}","bytes_in":${bytes_in}, "path":"${path}", "referer":"${referer}",` +
@@ -108,12 +108,12 @@ func TestLoggerCustomTimestamp(t *testing.T) {
 		Output:           buf,
 	}))
 
-	e.Handle("/", func(c gig.Context) error {
+	g.Handle("/", func(c gig.Context) error {
 		return c.Gemini(gig.StatusSuccess, "custom time stamp test")
 	})
 
-	c, _ := gigtest.NewContext(e, "/", nil)
-	e.ServeGemini(c)
+	c, _ := gigtest.NewContext(g, "/", nil)
+	g.ServeGemini(c)
 
 	var objs map[string]*json.RawMessage
 	if err := json.Unmarshal(buf.Bytes(), &objs); err != nil {

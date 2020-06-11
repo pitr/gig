@@ -41,20 +41,20 @@ func TestServe_NetError(t *testing.T) {
             Op:  "accept",
             Err: syscall.EMFILE,
         }}}
-    e := New()
-    e.Listener = ln
-    err := e.serve()
+    g := New()
+    g.Listener = ln
+    err := g.serve()
     assert.Equal(t, io.EOF, err)
 }
 
 func TestServe(t *testing.T) {
-    e := New()
+    g := New()
     go func() {
-        _ = e.StartTLS("127.0.0.1:0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
+        _ = g.StartTLS("127.0.0.1:0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
     }()
     time.Sleep(200 * time.Millisecond)
 
-    addr := e.Listener.Addr().String()
+    addr := g.Listener.Addr().String()
     conn, err := tls.Dial("tcp", addr, &tls.Config{InsecureSkipVerify: true})
     require.NoError(t, err)
     _, err = conn.Write([]byte("/test\r\n"))
@@ -67,19 +67,19 @@ func TestServe(t *testing.T) {
     assert.Equal(t, "51 Not Found\r\n\x00", string(buf))
     assert.Equal(t, 14, n)
 
-    e.Close()
+    g.Close()
 }
 
 func TestServe_SlowClient_Read(t *testing.T) {
-    e := New()
-    e.ReadTimeout = 1 * time.Millisecond
+    g := New()
+    g.ReadTimeout = 1 * time.Millisecond
 
     go func() {
-        _ = e.StartTLS("127.0.0.1:0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
+        _ = g.StartTLS("127.0.0.1:0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
     }()
     time.Sleep(200 * time.Millisecond)
 
-    addr := e.Listener.Addr().String()
+    addr := g.Listener.Addr().String()
     conn, err := tls.Dial("tcp", addr, &tls.Config{InsecureSkipVerify: true})
     require.NoError(t, err)
 
@@ -89,22 +89,22 @@ func TestServe_SlowClient_Read(t *testing.T) {
 
     require.Error(t, err)
 
-    e.Close()
+    g.Close()
 }
 
 func TestServe_SlowClient_Write(t *testing.T) {
-    e := New()
-    e.WriteTimeout = 1 * time.Millisecond
+    g := New()
+    g.WriteTimeout = 1 * time.Millisecond
 
     go func() {
-        err := e.StartTLS("127.0.0.1:0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
+        err := g.StartTLS("127.0.0.1:0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
         if err != ErrServerClosed { // Prevent the test to fail after closing the servers
             require.NoError(t, err)
         }
     }()
     time.Sleep(200 * time.Millisecond)
 
-    addr := e.Listener.Addr().String()
+    addr := g.Listener.Addr().String()
     conn, err := tls.Dial("tcp", addr, &tls.Config{InsecureSkipVerify: true})
     require.NoError(t, err)
     _, err = conn.Write([]byte("/test\r\n"))
@@ -112,17 +112,17 @@ func TestServe_SlowClient_Write(t *testing.T) {
 
     conn.Close() // client closes connection before reading response
 
-    e.Close()
+    g.Close()
 }
 
 func TestServe_Overflow(t *testing.T) {
-    e := New()
+    g := New()
     go func() {
-        _ = e.StartTLS("127.0.0.1:0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
+        _ = g.StartTLS("127.0.0.1:0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
     }()
     time.Sleep(200 * time.Millisecond)
 
-    addr := e.Listener.Addr().String()
+    addr := g.Listener.Addr().String()
     conn, err := tls.Dial("tcp", addr, &tls.Config{InsecureSkipVerify: true})
     require.NoError(t, err)
 
@@ -136,17 +136,17 @@ func TestServe_Overflow(t *testing.T) {
     assert.Equal(t, "59 Request too long!\r\n\x00", string(buf))
     assert.Equal(t, 22, n)
 
-    e.Close()
+    g.Close()
 }
 
 func TestServe_NotGemini(t *testing.T) {
-    e := New()
+    g := New()
     go func() {
-        _ = e.StartTLS("127.0.0.1:0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
+        _ = g.StartTLS("127.0.0.1:0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
     }()
     time.Sleep(200 * time.Millisecond)
 
-    addr := e.Listener.Addr().String()
+    addr := g.Listener.Addr().String()
     conn, err := tls.Dial("tcp", addr, &tls.Config{InsecureSkipVerify: true})
     require.NoError(t, err)
 
@@ -160,17 +160,17 @@ func TestServe_NotGemini(t *testing.T) {
     assert.Equal(t, "59 No proxying to non-Gemini content!\r\n\x00", string(buf))
     assert.Equal(t, 39, n)
 
-    e.Close()
+    g.Close()
 }
 
 func TestServe_NotURL(t *testing.T) {
-    e := New()
+    g := New()
     go func() {
-        _ = e.StartTLS("127.0.0.1:0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
+        _ = g.StartTLS("127.0.0.1:0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
     }()
     time.Sleep(200 * time.Millisecond)
 
-    addr := e.Listener.Addr().String()
+    addr := g.Listener.Addr().String()
     conn, err := tls.Dial("tcp", addr, &tls.Config{InsecureSkipVerify: true})
     require.NoError(t, err)
 
@@ -184,5 +184,5 @@ func TestServe_NotURL(t *testing.T) {
     assert.Equal(t, "59 Error parsing URL!\r\n\x00", string(buf))
     assert.Equal(t, 23, n)
 
-    e.Close()
+    g.Close()
 }

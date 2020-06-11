@@ -14,8 +14,8 @@ import (
 func TestCertAuth(t *testing.T) {
 	assert := assert.New(t)
 
-	e := gig.New()
-	c, _ := gigtest.NewContext(e, "/", nil)
+	g := gig.New()
+	c, _ := gigtest.NewContext(g, "/", nil)
 
 	f := func(cert *x509.Certificate, c gig.Context) *gig.GeminiError {
 		if cert == nil {
@@ -34,7 +34,7 @@ func TestCertAuth(t *testing.T) {
 	assert.Equal(h(c), gig.ErrClientCertificateRequired)
 
 	// Invalid certificate
-	c, _ = gigtest.NewContext(e, "/", &tls.ConnectionState{
+	c, _ = gigtest.NewContext(g, "/", &tls.ConnectionState{
 		PeerCertificates: []*x509.Certificate{
 			&x509.Certificate{Subject: pkix.Name{CommonName: "wrong"}},
 		},
@@ -42,7 +42,7 @@ func TestCertAuth(t *testing.T) {
 	assert.Equal(h(c), gig.ErrCertificateNotAccepted)
 
 	// Valid certificate
-	c, _ = gigtest.NewContext(e, "/", &tls.ConnectionState{
+	c, _ = gigtest.NewContext(g, "/", &tls.ConnectionState{
 		PeerCertificates: []*x509.Certificate{
 			&x509.Certificate{Subject: pkix.Name{CommonName: "gig-tester"}},
 		},
@@ -52,7 +52,7 @@ func TestCertAuth(t *testing.T) {
 
 func TestCertAuth_Validators(t *testing.T) {
 	assert := assert.New(t)
-	e := gig.New()
+	g := gig.New()
 
 	testCases := []struct {
 		validator   CertAuthValidator
@@ -84,11 +84,11 @@ func TestCertAuth_Validators(t *testing.T) {
 			})
 
 			// No certificate
-			c, _ := gigtest.NewContext(e, "/", nil)
+			c, _ := gigtest.NewContext(g, "/", nil)
 			assert.Equal(h(c), test.expectedErr)
 
 			// Invalid certificate
-			c, _ = gigtest.NewContext(e, "/", &tls.ConnectionState{
+			c, _ = gigtest.NewContext(g, "/", &tls.ConnectionState{
 				PeerCertificates: []*x509.Certificate{
 					&x509.Certificate{Subject: pkix.Name{CommonName: "tester"}},
 				},

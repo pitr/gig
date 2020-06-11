@@ -36,8 +36,8 @@ func (c *fakeConn) SetWriteDeadline(t time.Time) error { return nil }
 
 func newContext(uri string) Context {
 	u, _ := url.Parse(uri)
-	e := New()
+	g := New()
 	maxParam := 20
-	e.maxParam = &maxParam
-	return e.NewContext(&fakeConn{}, u, uri, nil)
+	g.maxParam = &maxParam
+	return g.NewContext(&fakeConn{}, u, uri, nil)
 }

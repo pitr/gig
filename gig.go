@@ -17,17 +17,17 @@ Example:
 
   func main() {
     // Gig instance
-    e := gig.New()
+    g := gig.New()
 
     // Middleware
-    e.Use(middleware.Logger())
-    e.Use(middleware.Recover())
+    g.Use(middleware.Logger())
+    g.Use(middleware.Recover())
 
     // Routes
-    e.GET("/", hello)
+    g.GET("/", hello)
 
     // Start server
-    e.Logger.Fatal(e.StartAutoTLS(":1323"))
+    g.Logger.Fatal(g.StartAutoTLS(":1323"))
   }
 */
 package gig
@@ -124,19 +124,16 @@ type (
 
 // MIME types
 const (
-	MIMEApplicationJSON                  = "application/json"
-	MIMEApplicationJSONCharsetUTF8       = MIMEApplicationJSON + "; " + charsetUTF8
-	MIMEApplicationJavaScript            = "application/javascript"
-	MIMEApplicationJavaScriptCharsetUTF8 = MIMEApplicationJavaScript + "; " + charsetUTF8
-	MIMEApplicationXML                   = "application/xml"
-	MIMEApplicationXMLCharsetUTF8        = MIMEApplicationXML + "; " + charsetUTF8
-	MIMETextXML                          = "text/xml"
-	MIMETextXMLCharsetUTF8               = MIMETextXML + "; " + charsetUTF8
-	MIMETextGemini                       = "text/gemini"
-	MIMETextGeminiCharsetUTF8            = MIMETextGemini + "; " + charsetUTF8
-	MIMETextPlain                        = "text/plain"
-	MIMETextPlainCharsetUTF8             = MIMETextPlain + "; " + charsetUTF8
-	MIMEMultipartForm                    = "multipart/form-data"
+	MIMEApplicationJSON            = "application/json"
+	MIMEApplicationJSONCharsetUTF8 = MIMEApplicationJSON + "; " + charsetUTF8
+	MIMEApplicationXML             = "application/xml"
+	MIMEApplicationXMLCharsetUTF8  = MIMEApplicationXML + "; " + charsetUTF8
+	MIMETextXML                    = "text/xml"
+	MIMETextXMLCharsetUTF8         = MIMETextXML + "; " + charsetUTF8
+	MIMETextGemini                 = "text/gemini"
+	MIMETextGeminiCharsetUTF8      = MIMETextGemini + "; " + charsetUTF8
+	MIMETextPlain                  = "text/plain"
+	MIMETextPlainCharsetUTF8       = MIMETextPlain + "; " + charsetUTF8
 )
 
 const (
@@ -191,8 +188,8 @@ var (
 )
 
 // New creates an instance of Gig.
-func New() (e *Gig) {
-	e = &Gig{
+func New() (g *Gig) {
+	g = &Gig{
 		TLSConfig: &tls.Config{
 			MinVersion: tls.VersionTLS12,
 		},
@@ -204,38 +201,38 @@ func New() (e *Gig) {
 		maxParam: new(int),
 		doneChan: make(chan struct{}),
 	}
-	e.GeminiErrorHandler = e.DefaultGeminiErrorHandler
-	e.Logger.SetLevel(log.ERROR)
-	e.pool.New = func() interface{} {
-		return e.NewContext(nil, nil, "", nil)
+	g.GeminiErrorHandler = g.DefaultGeminiErrorHandler
+	g.Logger.SetLevel(log.ERROR)
+	g.pool.New = func() interface{} {
+		return g.NewContext(nil, nil, "", nil)
 	}
-	e.router = NewRouter(e)
+	g.router = NewRouter(g)
 	return
 }
 
 // NewContext returns a Context instance.
-func (e *Gig) NewContext(c net.Conn, u *url.URL, requestURI string, tls *tls.ConnectionState) Context {
+func (g *Gig) NewContext(c net.Conn, u *url.URL, requestURI string, tls *tls.ConnectionState) Context {
 	return &context{
 		conn:       c,
 		TLS:        tls,
 		u:          u,
 		requestURI: requestURI,
-		response:   NewResponse(c, e.Logger),
+		response:   NewResponse(c, g.Logger),
 		store:      make(Map),
-		gig:        e,
-		pvalues:    make([]string, *e.maxParam),
+		gig:        g,
+		pvalues:    make([]string, *g.maxParam),
 		handler:    NotFoundHandler,
 	}
 }
 
 // Router returns the default router.
-func (e *Gig) Router() *Router {
-	return e.router
+func (g *Gig) Router() *Router {
+	return g.router
 }
 
 // DefaultGeminiErrorHandler is the default HTTP error handler. It sends a JSON response
 // with status code.
-func (e *Gig) DefaultGeminiErrorHandler(err error, c Context) {
+func (g *Gig) DefaultGeminiErrorHandler(err error, c Context) {
 	he, ok := err.(*GeminiError)
 	if !ok {
 		he = &GeminiError{
@@ -246,7 +243,7 @@ func (e *Gig) DefaultGeminiErrorHandler(err error, c Context) {
 
 	code := he.Code
 	message := he.Message
-	if e.Debug {
+	if g.Debug {
 		message = err.Error()
 	}
 
@@ -254,34 +251,34 @@ func (e *Gig) DefaultGeminiErrorHandler(err error, c Context) {
 	if !c.Response().Committed {
 		err = c.NoContent(code, message)
 		if err != nil {
-			e.Logger.Error(err)
+			g.Logger.Error(err)
 		}
 	}
 }
 
 // Pre adds middleware to the chain which is run before router.
-func (e *Gig) Pre(middleware ...MiddlewareFunc) {
-	e.premiddleware = append(e.premiddleware, middleware...)
+func (g *Gig) Pre(middleware ...MiddlewareFunc) {
+	g.premiddleware = append(g.premiddleware, middleware...)
 }
 
 // Use adds middleware to the chain which is run after router.
-func (e *Gig) Use(middleware ...MiddlewareFunc) {
-	e.middleware = append(e.middleware, middleware...)
+func (g *Gig) Use(middleware ...MiddlewareFunc) {
+	g.middleware = append(g.middleware, middleware...)
 }
 
 // Handle registers a new route for a path with matching handler in the router
 // with optional route-level middleware.
-func (e *Gig) Handle(path string, h HandlerFunc, m ...MiddlewareFunc) *Route {
-	return e.add(path, h, m...)
+func (g *Gig) Handle(path string, h HandlerFunc, m ...MiddlewareFunc) *Route {
+	return g.add(path, h, m...)
 }
 
 // Static registers a new route with path prefix to serve static files from the
 // provided root directory.
-func (e *Gig) Static(prefix, root string) *Route {
+func (g *Gig) Static(prefix, root string) *Route {
 	if root == "" {
 		root = "." // For security we want to restrict to CWD.
 	}
-	return e.static(prefix, root, e.Handle)
+	return g.static(prefix, root, g.Handle)
 }
 
 func (common) static(prefix, root string, get func(string, HandlerFunc, ...MiddlewareFunc) *Route) *Route {
@@ -307,13 +304,13 @@ func (common) file(path, file string, get func(string, HandlerFunc, ...Middlewar
 }
 
 // File registers a new route with path to serve a static file with optional route-level middleware.
-func (e *Gig) File(path, file string, m ...MiddlewareFunc) *Route {
-	return e.file(path, file, e.Handle, m...)
+func (g *Gig) File(path, file string, m ...MiddlewareFunc) *Route {
+	return g.file(path, file, g.Handle, m...)
 }
 
-func (e *Gig) add(path string, handler HandlerFunc, middleware ...MiddlewareFunc) *Route {
+func (g *Gig) add(path string, handler HandlerFunc, middleware ...MiddlewareFunc) *Route {
 	name := handlerName(handler)
-	e.router.Add(path, func(c Context) error {
+	g.router.Add(path, func(c Context) error {
 		h := handler
 		// Chain middleware
 		for i := len(middleware) - 1; i >= 0; i-- {
@@ -325,29 +322,29 @@ func (e *Gig) add(path string, handler HandlerFunc, middleware ...MiddlewareFunc
 		Path: path,
 		Name: name,
 	}
-	e.router.routes[path] = r
+	g.router.routes[path] = r
 	return r
 }
 
 // Group creates a new router group with prefix and optional group-level middleware.
-func (e *Gig) Group(prefix string, m ...MiddlewareFunc) (g *Group) {
-	g = &Group{prefix: prefix, gig: e}
-	g.Use(m...)
+func (g *Gig) Group(prefix string, m ...MiddlewareFunc) (gg *Group) {
+	gg = &Group{prefix: prefix, gig: g}
+	gg.Use(m...)
 	return
 }
 
 // URL generates a URL from handler.
-func (e *Gig) URL(handler HandlerFunc, params ...interface{}) string {
+func (g *Gig) URL(handler HandlerFunc, params ...interface{}) string {
 	name := handlerName(handler)
-	return e.Reverse(name, params...)
+	return g.Reverse(name, params...)
 }
 
 // Reverse generates an URL from route name and provided parameters.
-func (e *Gig) Reverse(name string, params ...interface{}) string {
+func (g *Gig) Reverse(name string, params ...interface{}) string {
 	uri := new(bytes.Buffer)
 	ln := len(params)
 	n := 0
-	for _, r := range e.router.routes {
+	for _, r := range g.router.routes {
 		if r.Name == name {
 			for i, l := 0, len(r.Path); i < l; i++ {
 				if r.Path[i] == ':' && n < ln {
@@ -367,9 +364,9 @@ func (e *Gig) Reverse(name string, params ...interface{}) string {
 }
 
 // Routes returns the registered routes.
-func (e *Gig) Routes() []*Route {
-	routes := make([]*Route, 0, len(e.router.routes))
-	for _, v := range e.router.routes {
+func (g *Gig) Routes() []*Route {
+	routes := make([]*Route, 0, len(g.router.routes))
+	for _, v := range g.router.routes {
 		routes = append(routes, v)
 	}
 	return routes
@@ -377,46 +374,46 @@ func (e *Gig) Routes() []*Route {
 
 // AcquireContext returns an empty `Context` instance from the pool.
 // You must return the context by calling `ReleaseContext()`.
-func (e *Gig) AcquireContext() Context {
-	return e.pool.Get().(Context)
+func (g *Gig) AcquireContext() Context {
+	return g.pool.Get().(Context)
 }
 
 // ReleaseContext returns the `Context` instance back to the pool.
 // You must call it after `AcquireContext()`.
-func (e *Gig) ReleaseContext(c Context) {
-	e.pool.Put(c)
+func (g *Gig) ReleaseContext(c Context) {
+	g.pool.Put(c)
 }
 
 // ServeGemini serves Gemini request
-func (e *Gig) ServeGemini(c Context) {
+func (g *Gig) ServeGemini(c Context) {
 	var h HandlerFunc
 
 	URL := c.URL()
 
-	if e.premiddleware == nil {
-		e.router.Find(GetPath(URL), c)
+	if g.premiddleware == nil {
+		g.router.Find(GetPath(URL), c)
 		h = c.Handler()
-		h = applyMiddleware(h, e.middleware...)
+		h = applyMiddleware(h, g.middleware...)
 	} else {
 		h = func(c Context) error {
-			e.router.Find(GetPath(URL), c)
+			g.router.Find(GetPath(URL), c)
 			h := c.Handler()
-			h = applyMiddleware(h, e.middleware...)
+			h = applyMiddleware(h, g.middleware...)
 			return h(c)
 		}
-		h = applyMiddleware(h, e.premiddleware...)
+		h = applyMiddleware(h, g.premiddleware...)
 	}
 
 	// Execute chain
 	if err := h(c); err != nil {
-		e.GeminiErrorHandler(err, c)
+		g.GeminiErrorHandler(err, c)
 	}
 }
 
 // StartTLS starts a Gemini server.
 // If `certFile` or `keyFile` is `string` the values are treated as file paths.
 // If `certFile` or `keyFile` is `[]byte` the values are treated as the certificate or key as-is.
-func (e *Gig) StartTLS(address string, certFile, keyFile interface{}) (err error) {
+func (g *Gig) StartTLS(address string, certFile, keyFile interface{}) (err error) {
 	var cert []byte
 	if cert, err = filepathOrContent(certFile); err != nil {
 		return
@@ -427,12 +424,12 @@ func (e *Gig) StartTLS(address string, certFile, keyFile interface{}) (err error
 		return
 	}
 
-	e.TLSConfig.Certificates = make([]tls.Certificate, 1)
-	if e.TLSConfig.Certificates[0], err = tls.X509KeyPair(cert, key); err != nil {
+	g.TLSConfig.Certificates = make([]tls.Certificate, 1)
+	if g.TLSConfig.Certificates[0], err = tls.X509KeyPair(cert, key); err != nil {
 		return
 	}
 
-	return e.startTLS(address)
+	return g.startTLS(address)
 }
 
 func filepathOrContent(fileOrContent interface{}) (content []byte, err error) {
@@ -447,50 +444,50 @@ func filepathOrContent(fileOrContent interface{}) (content []byte, err error) {
 }
 
 // StartAutoTLS starts a Gemini server using certificates automatically installed from https://letsencrypt.org.
-func (e *Gig) StartAutoTLS(address string) error {
-	e.TLSConfig.GetCertificate = e.AutoTLSManager.GetCertificate
-	e.TLSConfig.NextProtos = append(e.TLSConfig.NextProtos, acme.ALPNProto)
-	return e.startTLS(address)
+func (g *Gig) StartAutoTLS(address string) error {
+	g.TLSConfig.GetCertificate = g.AutoTLSManager.GetCertificate
+	g.TLSConfig.NextProtos = append(g.TLSConfig.NextProtos, acme.ALPNProto)
+	return g.startTLS(address)
 }
 
-func (e *Gig) startTLS(address string) error {
-	e.Addr = address
+func (g *Gig) startTLS(address string) error {
+	g.Addr = address
 
 	// Setup
-	e.colorer.SetOutput(e.Logger.Output())
-	if e.Debug {
-		e.Logger.SetLevel(log.DEBUG)
+	g.colorer.SetOutput(g.Logger.Output())
+	if g.Debug {
+		g.Logger.SetLevel(log.DEBUG)
 	}
 
-	if !e.HideBanner {
-		e.colorer.Printf(banner, e.colorer.Red("v"+Version))
+	if !g.HideBanner {
+		g.colorer.Printf(banner, g.colorer.Red("v"+Version))
 	}
 
-	e.mu.Lock()
-	if e.Listener == nil {
-		l, err := newListener(e.Addr)
+	g.mu.Lock()
+	if g.Listener == nil {
+		l, err := newListener(g.Addr)
 		if err != nil {
 			return err
 		}
-		e.Listener = tls.NewListener(l, e.TLSConfig)
+		g.Listener = tls.NewListener(l, g.TLSConfig)
 	}
-	e.mu.Unlock()
-	defer e.Listener.Close()
+	g.mu.Unlock()
+	defer g.Listener.Close()
 
-	if !e.HidePort {
-		e.colorer.Printf("⇨ gemini server started on %s\n", e.colorer.Green(e.Listener.Addr()))
+	if !g.HidePort {
+		g.colorer.Printf("⇨ gemini server started on %s\n", g.colorer.Green(g.Listener.Addr()))
 	}
-	return e.serve()
+	return g.serve()
 }
 
-func (e *Gig) serve() error {
+func (g *Gig) serve() error {
 	var tempDelay time.Duration // how long to sleep on accept failure
 
 	for {
-		conn, err := e.Listener.Accept()
+		conn, err := g.Listener.Accept()
 		if err != nil {
 			select {
-			case <-e.doneChan:
+			case <-g.doneChan:
 				return ErrServerClosed
 			default:
 			}
@@ -504,7 +501,7 @@ func (e *Gig) serve() error {
 				if max := 1 * time.Second; tempDelay > max {
 					tempDelay = max
 				}
-				e.Logger.Errorf("gemini: Accept error: %v; retrying in %v", err, tempDelay)
+				g.Logger.Errorf("gemini: Accept error: %v; retrying in %v", err, tempDelay)
 				time.Sleep(tempDelay)
 				continue
 			}
@@ -513,38 +510,38 @@ func (e *Gig) serve() error {
 
 		tc, ok := conn.(*tls.Conn)
 		if !ok {
-			e.Logger.Errorf("gemini: non-tls connection")
+			g.Logger.Errorf("gemini: non-tls connection")
 			continue
 		}
 
-		go e.handleRequest(tc)
+		go g.handleRequest(tc)
 	}
 }
 
-func (e *Gig) handleRequest(conn *tls.Conn) {
+func (g *Gig) handleRequest(conn *tls.Conn) {
 	defer conn.Close()
 
-	if d := e.ReadTimeout; d != 0 {
+	if d := g.ReadTimeout; d != 0 {
 		err := conn.SetReadDeadline(time.Now().Add(d))
 		if err != nil {
-			e.Logger.Error(err)
+			g.Logger.Error(err)
 		}
 	}
 
 	reader := bufio.NewReaderSize(conn, 1024)
 	request, overflow, err := reader.ReadLine()
 	if overflow {
-		_ = NewResponse(conn, e.Logger).WriteHeader(StatusBadRequest, "Request too long!")
+		_ = NewResponse(conn, g.Logger).WriteHeader(StatusBadRequest, "Request too long!")
 		return
 	} else if err != nil {
-		_ = NewResponse(conn, e.Logger).WriteHeader(StatusBadRequest, "Unknown error reading request! "+err.Error())
+		_ = NewResponse(conn, g.Logger).WriteHeader(StatusBadRequest, "Unknown error reading request! "+err.Error())
 		return
 	}
 
 	RequestURI := string(request)
 	URL, err := url.Parse(RequestURI)
 	if err != nil {
-		_ = NewResponse(conn, e.Logger).WriteHeader(StatusBadRequest, "Error parsing URL!")
+		_ = NewResponse(conn, g.Logger).WriteHeader(StatusBadRequest, "Error parsing URL!")
 		return
 	}
 	if URL.Scheme == "" {
@@ -552,14 +549,14 @@ func (e *Gig) handleRequest(conn *tls.Conn) {
 	}
 
 	if URL.Scheme != "gemini" {
-		_ = NewResponse(conn, e.Logger).WriteHeader(StatusBadRequest, "No proxying to non-Gemini content!")
+		_ = NewResponse(conn, g.Logger).WriteHeader(StatusBadRequest, "No proxying to non-Gemini content!")
 		return
 	}
 
-	if d := e.WriteTimeout; d != 0 {
+	if d := g.WriteTimeout; d != 0 {
 		err := conn.SetWriteDeadline(time.Now().Add(d))
 		if err != nil {
-			e.Logger.Error(err)
+			g.Logger.Error(err)
 		}
 	}
 
@@ -567,25 +564,25 @@ func (e *Gig) handleRequest(conn *tls.Conn) {
 	*tlsState = conn.ConnectionState()
 
 	// Acquire context
-	c := e.pool.Get().(*context)
+	c := g.pool.Get().(*context)
 	c.Reset(conn, URL, RequestURI, tlsState)
 
-	e.ServeGemini(c)
+	g.ServeGemini(c)
 
 	// Release context
-	e.pool.Put(c)
+	g.pool.Put(c)
 }
 
 // Close immediately stops the server.
 // It internally calls `net.Listener#Close()`.
-func (e *Gig) Close() error {
-	e.closeOnce.Do(func() {
-		close(e.doneChan)
+func (g *Gig) Close() error {
+	g.closeOnce.Do(func() {
+		close(g.doneChan)
 	})
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	if e.Listener != nil {
-		return e.Listener.Close()
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if g.Listener != nil {
+		return g.Listener.Close()
 	}
 	return nil
 }
