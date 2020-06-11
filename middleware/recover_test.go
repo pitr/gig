@@ -17,7 +17,7 @@ func TestRecover(t *testing.T) {
 	h := Recover()(gig.HandlerFunc(func(c gig.Context) error {
 		panic("test")
 	}))
-	h(c)
+	assert.Nil(t, h(c))
 	assert.Equal(t, "50 test\r\n", rec.Written)
 	assert.Contains(t, buf.String(), "PANIC RECOVER")
 }
@@ -30,7 +30,7 @@ func TestRecover_Defaults(t *testing.T) {
 	h := RecoverWithConfig(RecoverConfig{})(gig.HandlerFunc(func(c gig.Context) error {
 		panic("test")
 	}))
-	h(c)
+	assert.Nil(t, h(c))
 	assert.Equal(t, "50 test\r\n", rec.Written)
 	assert.Contains(t, buf.String(), "PANIC RECOVER")
 }

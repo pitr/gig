@@ -116,7 +116,7 @@ func TestLoggerCustomTimestamp(t *testing.T) {
 	e.ServeGemini(c)
 
 	var objs map[string]*json.RawMessage
-	if err := json.Unmarshal([]byte(buf.String()), &objs); err != nil {
+	if err := json.Unmarshal(buf.Bytes(), &objs); err != nil {
 		panic(err)
 	}
 	loggedTime := *(*string)(unsafe.Pointer(objs["time"]))
