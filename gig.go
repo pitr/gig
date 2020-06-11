@@ -156,22 +156,22 @@ const (
 
 // Errors
 var (
-	ErrTemporaryFailure              = NewGeminiError(StatusTemporaryFailure, "Temporary Failure")
-	ErrServerUnavailable             = NewGeminiError(StatusServerUnavailable, "Server Unavailable")
-	ErrCGIError                      = NewGeminiError(StatusCGIError, "CGI Error")
-	ErrProxyError                    = NewGeminiError(StatusProxyError, "Proxy Error")
-	ErrSlowDown                      = NewGeminiError(StatusSlowDown, "Slow Down")
-	ErrPermanentFailure              = NewGeminiError(StatusPermanentFailure, "Permanent Failure")
-	ErrNotFound                      = NewGeminiError(StatusNotFound, "Not Found")
-	ErrGone                          = NewGeminiError(StatusGone, "Gone")
-	ErrProxyRequestRefused           = NewGeminiError(StatusProxyRequestRefused, "Proxy Request Refused")
-	ErrBadRequest                    = NewGeminiError(StatusBadRequest, "Bad Request")
-	ErrClientCertificateRequired     = NewGeminiError(StatusClientCertificateRequired, "Client Certificate Required")
-	ErrTransientCertificateRequested = NewGeminiError(StatusTransientCertificateRequested, "Transient Certificate Requested")
-	ErrAuthorisedCertificateRequired = NewGeminiError(StatusAuthorisedCertificateRequired, "Authorised Certificate Required")
-	ErrCertificateNotAccepted        = NewGeminiError(StatusCertificateNotAccepted, "Certificate Not Accepted")
-	ErrFutureCertificateRejected     = NewGeminiError(StatusFutureCertificateRejected, "Future Certificate Rejected")
-	ErrExpiredCertificateRejected    = NewGeminiError(StatusExpiredCertificateRejected, "Expired Certificate Rejected")
+	ErrTemporaryFailure              = NewError(StatusTemporaryFailure, "Temporary Failure")
+	ErrServerUnavailable             = NewError(StatusServerUnavailable, "Server Unavailable")
+	ErrCGIError                      = NewError(StatusCGIError, "CGI Error")
+	ErrProxyError                    = NewError(StatusProxyError, "Proxy Error")
+	ErrSlowDown                      = NewError(StatusSlowDown, "Slow Down")
+	ErrPermanentFailure              = NewError(StatusPermanentFailure, "Permanent Failure")
+	ErrNotFound                      = NewError(StatusNotFound, "Not Found")
+	ErrGone                          = NewError(StatusGone, "Gone")
+	ErrProxyRequestRefused           = NewError(StatusProxyRequestRefused, "Proxy Request Refused")
+	ErrBadRequest                    = NewError(StatusBadRequest, "Bad Request")
+	ErrClientCertificateRequired     = NewError(StatusClientCertificateRequired, "Client Certificate Required")
+	ErrTransientCertificateRequested = NewError(StatusTransientCertificateRequested, "Transient Certificate Requested")
+	ErrAuthorisedCertificateRequired = NewError(StatusAuthorisedCertificateRequired, "Authorised Certificate Required")
+	ErrCertificateNotAccepted        = NewError(StatusCertificateNotAccepted, "Certificate Not Accepted")
+	ErrFutureCertificateRejected     = NewError(StatusFutureCertificateRejected, "Future Certificate Rejected")
+	ErrExpiredCertificateRejected    = NewError(StatusExpiredCertificateRejected, "Expired Certificate Rejected")
 
 	ErrRendererNotRegistered = errors.New("renderer not registered")
 	ErrInvalidRedirectCode   = errors.New("invalid redirect status code")
@@ -587,19 +587,19 @@ func (g *Gig) Close() error {
 	return nil
 }
 
-// NewGeminiError creates a new GeminiError instance.
-func NewGeminiError(code Status, message string) *GeminiError {
+// NewError creates a new GeminiError instance.
+func NewError(code Status, message string) *GeminiError {
 	return &GeminiError{Code: code, Message: message}
 }
 
-// NewGeminiErrorFrom creates a new GeminiError instance using Code from existing GeminiError.
-func NewGeminiErrorFrom(err *GeminiError, message string) *GeminiError {
+// NewErrorFrom creates a new GeminiError instance using Code from existing GeminiError.
+func NewErrorFrom(err *GeminiError, message string) *GeminiError {
 	return &GeminiError{Code: err.Code, Message: message}
 }
 
 // Error makes it compatible with `error` interface.
 func (ge *GeminiError) Error() string {
-	return fmt.Sprintf("code=%d, message=%v", ge.Code, ge.Message)
+	return fmt.Sprintf("error=%s", ge.Message)
 }
 
 // GetPath returns RawPath, if it's empty returns Path from URL

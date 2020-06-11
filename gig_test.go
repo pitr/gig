@@ -139,7 +139,7 @@ func TestGigMiddlewareError(t *testing.T) {
 	g := New()
 	g.Use(func(next HandlerFunc) HandlerFunc {
 		return func(c Context) error {
-			return NewGeminiErrorFrom(ErrPermanentFailure, "oops")
+			return NewErrorFrom(ErrPermanentFailure, "oops")
 		}
 	})
 	g.Handle("/", NotFoundHandler)
@@ -415,17 +415,17 @@ func request(path string, g *Gig) string {
 
 func TestGeminiError(t *testing.T) {
 	t.Run("manual", func(t *testing.T) {
-		err := NewGeminiError(StatusSlowDown, "oops")
-		assert.Equal(t, "code=44, message=oops", err.Error())
+		err := NewError(StatusSlowDown, "oops")
+		assert.Equal(t, "error=oops", err.Error())
 
 	})
 	t.Run("existing", func(t *testing.T) {
 		err := ErrSlowDown
-		assert.Equal(t, "code=44, message=Slow Down", err.Error())
+		assert.Equal(t, "error=Slow Down", err.Error())
 	})
 	t.Run("inherited", func(t *testing.T) {
-		err := NewGeminiErrorFrom(ErrSlowDown, "oops")
-		assert.Equal(t, "code=44, message=oops", err.Error())
+		err := NewErrorFrom(ErrSlowDown, "oops")
+		assert.Equal(t, "error=oops", err.Error())
 	})
 }
 
