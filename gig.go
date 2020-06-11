@@ -152,6 +152,7 @@ const (
 /___/  /___/   %s
 
 `
+	defaultLogHeader = "level=${level} src=${short_file}:${line}"
 )
 
 // Errors
@@ -203,6 +204,7 @@ func New() (g *Gig) {
 	}
 	g.GeminiErrorHandler = g.DefaultGeminiErrorHandler
 	g.Logger.SetLevel(log.ERROR)
+	g.Logger.SetHeader(defaultLogHeader)
 	g.pool.New = func() interface{} {
 		return g.NewContext(nil, nil, "", nil)
 	}
