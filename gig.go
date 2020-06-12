@@ -10,11 +10,6 @@ Example:
     "github.com/pitr/gig/middleware"
   )
 
-  // Handler
-  func hello(c gig.Context) error {
-    return c.String(gig.StatusSuccess, "Hello, World!")
-  }
-
   func main() {
     // Gig instance
     g := gig.New()
@@ -24,10 +19,12 @@ Example:
     g.Use(middleware.Recover())
 
     // Routes
-    g.Handle("/", hello)
+    g.Handle("/", func(c gig.Context) error {
+        return c.Gemini(gig.StatusSuccess, "# Hello, World!")
+    })
 
     // Start server
-    g.Run(":1323", "my.crt", "my.key")
+    panic(g.Run(":1323", "my.crt", "my.key"))
   }
 */
 package gig
@@ -183,6 +180,7 @@ func New() (g *Gig) {
 	g = &Gig{
 		TLSConfig: &tls.Config{
 			MinVersion: tls.VersionTLS12,
+			ClientAuth: tls.RequestClientCert,
 		},
 		maxParam: new(int),
 		doneChan: make(chan struct{}),
@@ -393,10 +391,10 @@ func (g *Gig) ServeGemini(c Context) {
 	}
 }
 
-// StartTLS starts a Gemini server.
+// Run starts a Gemini server.
 // If `certFile` or `keyFile` is `string` the values are treated as file paths.
 // If `certFile` or `keyFile` is `[]byte` the values are treated as the certificate or key as-is.
-func (g *Gig) StartTLS(address string, certFile, keyFile interface{}) (err error) {
+func (g *Gig) Run(address string, certFile, keyFile interface{}) (err error) {
 	var cert []byte
 	if cert, err = filepathOrContent(certFile); err != nil {
 		return
@@ -502,17 +500,20 @@ func (g *Gig) handleRequest(conn *tls.Conn) {
 	reader := bufio.NewReaderSize(conn, 1024)
 	request, overflow, err := reader.ReadLine()
 	if overflow {
-		_ = NewResponse(conn).WriteHeader(StatusBadRequest, "Request too long!")
+		debugPrint("gemini: request overflow")
+		_, _ = conn.Write([]byte(fmt.Sprintf("%d %s\r\n", StatusBadRequest, "Request too long!")))
 		return
 	} else if err != nil {
-		_ = NewResponse(conn).WriteHeader(StatusBadRequest, "Unknown error reading request! "+err.Error())
+		debugPrint("gemini: %s", err)
+		_, _ = conn.Write([]byte(fmt.Sprintf("%d %s\r\n", StatusBadRequest, "Unknown error reading request!")))
 		return
 	}
 
 	RequestURI := string(request)
 	URL, err := url.Parse(RequestURI)
 	if err != nil {
-		_ = NewResponse(conn).WriteHeader(StatusBadRequest, "Error parsing URL!")
+		debugPrint("gemini: %s", err)
+		_, _ = conn.Write([]byte(fmt.Sprintf("%d %s\r\n", StatusBadRequest, "Error parsing URL!")))
 		return
 	}
 	if URL.Scheme == "" {
@@ -520,7 +521,8 @@ func (g *Gig) handleRequest(conn *tls.Conn) {
 	}
 
 	if URL.Scheme != "gemini" {
-		_ = NewResponse(conn).WriteHeader(StatusBadRequest, "No proxying to non-Gemini content!")
+		debugPrint("gemini: non-gemini scheme: %s", RequestURI)
+		_, _ = conn.Write([]byte(fmt.Sprintf("%d %s\r\n", StatusBadRequest, "No proxying to non-Gemini content!")))
 		return
 	}
 
@@ -596,9 +598,8 @@ func handlerName(h HandlerFunc) string {
 // }
 
 // tcpKeepAliveListener sets TCP keep-alive timeouts on accepted
-// connections. It's used by ListenAndServe and ListenAndServeTLS so
-// dead TCP connections (e.g. closing laptop mid-download) eventually
-// go away.
+// connections. It's used by Run so dead TCP connections (e.g.
+// closing laptop mid-download) eventually go away.
 type tcpKeepAliveListener struct {
 	*net.TCPListener
 }
@@ -629,4 +630,3 @@ func applyMiddleware(h HandlerFunc, middleware ...MiddlewareFunc) HandlerFunc {
 	}
 	return h
 }
-

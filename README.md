@@ -41,17 +41,12 @@ func main() {
   g.Use(middleware.Recover())
 
   // Routes
-  g.Handle("/", hello)
+  g.Handle("/", func(c gig.Context) error {
+      return c.Gemini(gig.StatusSuccess, "# Hello, World!")
+  })
 
   // Start server
-  g.Logger.Fatal(g.StartTLS(":1965", "cert.pem", "key.pem"))
-  // or use automatic certificates installed from https://letsencrypt.org.
-  // g.Logger.Fatal(g.StartAutoTLS(":1965"))
-}
-
-// Handler
-func hello(c gig.Context) error {
-  return c.String(gig.StatusSuccess, "Hello, World!")
+  panic(g.Run(":1323", "my.crt", "my.key"))
 }
 ```
 

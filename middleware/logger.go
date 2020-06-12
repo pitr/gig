@@ -150,7 +150,7 @@ func LoggerWithConfig(config LoggerConfig) gig.MiddlewareFunc {
 				return
 			}
 
-			fmt.Fprintf(gig.DefaultWriter, buf.String())
+			fmt.Fprint(gig.DefaultWriter, buf.String())
 			return
 		}
 	}

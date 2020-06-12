@@ -11,28 +11,6 @@ import (
 	"github.com/matryer/is"
 )
 
-type (
-	user struct {
-		ID   int    `json:"id" xml:"id" form:"id" query:"id" param:"id"`
-		Name string `json:"name" xml:"name" form:"name" query:"name" param:"name"`
-	}
-)
-
-const (
-	userJSON = `{"id":1,"name":"Jon Snow"}`
-	userXML  = `<user><id>1</id><name>Jon Snow</name></user>`
-)
-
-const userJSONPretty = `{
-  "id": 1,
-  "name": "Jon Snow"
-}`
-
-const userXMLPretty = `<user>
-  <id>1</id>
-  <name>Jon Snow</name>
-</user>`
-
 func TestGig(t *testing.T) {
 	is := is.New(t)
 
@@ -321,26 +299,26 @@ func TestGigContext(t *testing.T) {
 	g.ReleaseContext(c)
 }
 
-func TestGigStartTLS(t *testing.T) {
+func TestGigRun(t *testing.T) {
 	g := New()
 	go func() {
-		_ = g.StartTLS(":0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
+		_ = g.Run(":0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
 	}()
 	time.Sleep(200 * time.Millisecond)
 
 	g.Close()
 }
 
-func TestGigStartTLS_BadAddress(t *testing.T) {
+func TestGigRun_BadAddress(t *testing.T) {
 	is := is.New(t)
 
 	g := New()
-	err := g.StartTLS("garbage address", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
+	err := g.Run("garbage address", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
 	is.True(err != nil)
 	is.True(strings.Contains(err.Error(), "address garbage address: missing port in address"))
 }
 
-func TestGigStartTLSByteString(t *testing.T) {
+func TestGigRunByteString(t *testing.T) {
 	is := is.New(t)
 
 	cert, err := ioutil.ReadFile("_fixture/certs/cert.pem")
@@ -403,7 +381,7 @@ func TestGigStartTLSByteString(t *testing.T) {
 			g.HideBanner = true
 
 			go func() {
-				err := g.StartTLS(":0", test.cert, test.key)
+				err := g.Run(":0", test.cert, test.key)
 				if test.expectedErr != nil {
 					is.Equal(err.Error(), test.expectedErr.Error())
 				} else if err != ErrServerClosed { // Prevent the test to fail after closing the servers
@@ -448,7 +426,7 @@ func TestGigClose(t *testing.T) {
 	errCh := make(chan error)
 
 	go func() {
-		errCh <- g.StartTLS(":0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
+		errCh <- g.Run(":0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
 	}()
 
 	time.Sleep(200 * time.Millisecond)

@@ -53,7 +53,7 @@ func TestServe(t *testing.T) {
 
     g := New()
     go func() {
-        _ = g.StartTLS("127.0.0.1:0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
+        _ = g.Run("127.0.0.1:0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
     }()
     time.Sleep(200 * time.Millisecond)
 
@@ -80,7 +80,7 @@ func TestServe_SlowClient_Read(t *testing.T) {
     g.ReadTimeout = 1 * time.Millisecond
 
     go func() {
-        _ = g.StartTLS("127.0.0.1:0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
+        _ = g.Run("127.0.0.1:0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
     }()
     time.Sleep(200 * time.Millisecond)
 
@@ -104,7 +104,7 @@ func TestServe_SlowClient_Write(t *testing.T) {
     g.WriteTimeout = 1 * time.Millisecond
 
     go func() {
-        err := g.StartTLS("127.0.0.1:0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
+        err := g.Run("127.0.0.1:0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
         if err != ErrServerClosed { // Prevent the test to fail after closing the servers
             is.NoErr(err)
         }
@@ -127,7 +127,7 @@ func TestServe_Overflow(t *testing.T) {
 
     g := New()
     go func() {
-        _ = g.StartTLS("127.0.0.1:0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
+        _ = g.Run("127.0.0.1:0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
     }()
     time.Sleep(200 * time.Millisecond)
 
@@ -153,7 +153,7 @@ func TestServe_NotGemini(t *testing.T) {
 
     g := New()
     go func() {
-        _ = g.StartTLS("127.0.0.1:0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
+        _ = g.Run("127.0.0.1:0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
     }()
     time.Sleep(200 * time.Millisecond)
 
@@ -179,7 +179,7 @@ func TestServe_NotURL(t *testing.T) {
 
     g := New()
     go func() {
-        _ = g.StartTLS("127.0.0.1:0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
+        _ = g.Run("127.0.0.1:0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
     }()
     time.Sleep(200 * time.Millisecond)
 

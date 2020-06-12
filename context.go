@@ -122,7 +122,6 @@ type (
 
 const (
 	indexPage     = "index.gmi"
-	defaultIndent = "  "
 )
 
 func (c *context) Response() *Response {

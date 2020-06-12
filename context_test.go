@@ -29,13 +29,6 @@ func (t *TemplateFail) Render(w io.Writer, name string, data interface{}, c Cont
 	return errors.New("could not render")
 }
 
-type responseWriterErr struct{}
-
-func (responseWriterErr) Write([]byte) (int, error) {
-	return 0, errors.New("err")
-}
-func (responseWriterErr) WriteHeader(statusCode Status, mime string) {}
-
 func TestContext(t *testing.T) {
 	c := newContext("/").(*context)
 
@@ -174,6 +167,8 @@ func TestContextStore(t *testing.T) {
 }
 
 func BenchmarkContext_Store(b *testing.B) {
+	b.ReportAllocs()
+
 	g := &Gig{}
 
 	c := &context{
