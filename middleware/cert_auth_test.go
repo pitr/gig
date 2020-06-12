@@ -6,13 +6,13 @@ import (
 	"crypto/x509/pkix"
 	"testing"
 
+	"github.com/matryer/is"
 	"github.com/pitr/gig"
 	"github.com/pitr/gig/gigtest"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestCertAuth(t *testing.T) {
-	assert := assert.New(t)
+	is := is.New(t)
 
 	g := gig.New()
 	c, _ := gigtest.NewContext(g, "/", nil)
@@ -31,27 +31,27 @@ func TestCertAuth(t *testing.T) {
 	})
 
 	// No certificate
-	assert.Equal(h(c), gig.ErrClientCertificateRequired)
+	is.Equal(h(c), gig.ErrClientCertificateRequired)
 
 	// Invalid certificate
 	c, _ = gigtest.NewContext(g, "/", &tls.ConnectionState{
 		PeerCertificates: []*x509.Certificate{
-			&x509.Certificate{Subject: pkix.Name{CommonName: "wrong"}},
+			{Subject: pkix.Name{CommonName: "wrong"}},
 		},
 	})
-	assert.Equal(h(c), gig.ErrCertificateNotAccepted)
+	is.Equal(h(c), gig.ErrCertificateNotAccepted)
 
 	// Valid certificate
 	c, _ = gigtest.NewContext(g, "/", &tls.ConnectionState{
 		PeerCertificates: []*x509.Certificate{
-			&x509.Certificate{Subject: pkix.Name{CommonName: "gig-tester"}},
+			{Subject: pkix.Name{CommonName: "gig-tester"}},
 		},
 	})
-	assert.NoError(h(c))
+	is.NoErr(h(c))
 }
 
 func TestCertAuth_Validators(t *testing.T) {
-	assert := assert.New(t)
+	is := is.New(t)
 	g := gig.New()
 
 	testCases := []struct {
@@ -85,16 +85,16 @@ func TestCertAuth_Validators(t *testing.T) {
 
 			// No certificate
 			c, _ := gigtest.NewContext(g, "/", nil)
-			assert.Equal(h(c), test.expectedErr)
+			is.Equal(h(c), test.expectedErr)
 
 			// Invalid certificate
 			c, _ = gigtest.NewContext(g, "/", &tls.ConnectionState{
 				PeerCertificates: []*x509.Certificate{
-					&x509.Certificate{Subject: pkix.Name{CommonName: "tester"}},
+					{Subject: pkix.Name{CommonName: "tester"}},
 				},
 			})
-			assert.NoError(h(c), nil)
-			assert.Equal("tester", c.Get("subject").(string))
+			is.NoErr(h(c))
+			is.Equal("tester", c.Get("subject").(string))
 		})
 	}
 }

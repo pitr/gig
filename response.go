@@ -8,7 +8,6 @@ import (
 type (
 	// Response wraps net.Conn, to be used by a context to construct a response.
 	Response struct {
-		logger    Logger
 		Writer    io.Writer
 		Status    Status
 		Meta      string
@@ -18,8 +17,8 @@ type (
 )
 
 // NewResponse creates a new instance of Response.
-func NewResponse(w io.Writer, logger Logger) (r *Response) {
-	return &Response{Writer: w, logger: logger}
+func NewResponse(w io.Writer) (r *Response) {
+	return &Response{Writer: w}
 }
 
 // WriteHeader sends a Gemini response header with status code. If WriteHeader is
@@ -28,7 +27,7 @@ func NewResponse(w io.Writer, logger Logger) (r *Response) {
 // are mainly used to send error codes.
 func (r *Response) WriteHeader(code Status, meta string) error {
 	if r.Committed {
-		r.logger.Warn("response already committed")
+		debugPrint("response already committed")
 		return nil
 	}
 	r.Status = code

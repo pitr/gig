@@ -3,8 +3,6 @@ package gig
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
-	"encoding/xml"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -17,8 +15,6 @@ import (
 	"sort"
 	"strings"
 	"sync"
-
-	"github.com/cloudfoundry/bytefmt"
 )
 
 type (
@@ -72,24 +68,6 @@ type (
 		// String sends a string response with status code.
 		Text(code Status, s string) error
 
-		// JSON sends a JSON response with status code.
-		JSON(code Status, i interface{}) error
-
-		// JSONPretty sends a pretty-print JSON with status code.
-		JSONPretty(code Status, i interface{}, indent string) error
-
-		// JSONBlob sends a JSON blob response with status code.
-		JSONBlob(code Status, b []byte) error
-
-		// XML sends an XML response with status code.
-		XML(code Status, i interface{}) error
-
-		// XMLPretty sends a pretty-print XML with status code.
-		XMLPretty(code Status, i interface{}, indent string) error
-
-		// XMLBlob sends an XML blob response with status code.
-		XMLBlob(code Status, b []byte) error
-
 		// Blob sends a blob response with status code and content type.
 		Blob(code Status, contentType string, b []byte) error
 
@@ -117,12 +95,6 @@ type (
 		// SetHandler sets the matched handler by router.
 		SetHandler(h HandlerFunc)
 
-		// Logger returns the `Logger` instance.
-		Logger() Logger
-
-		// Set the logger
-		SetLogger(l Logger)
-
 		// Gig returns the `Gig` instance.
 		Gig() *Gig
 
@@ -144,7 +116,6 @@ type (
 		handler    HandlerFunc
 		store      Map
 		gig        *Gig
-		logger     Logger
 		lock       sync.RWMutex
 	}
 )
@@ -239,74 +210,6 @@ func (c *context) Text(code Status, s string) (err error) {
 	return c.Blob(code, MIMETextPlainCharsetUTF8, []byte(s))
 }
 
-func (c *context) json(code Status, i interface{}, indent string) (err error) {
-	enc := json.NewEncoder(c.response)
-	if indent != "" {
-		enc.SetIndent("", indent)
-	}
-	err = c.response.WriteHeader(code, MIMEApplicationJSONCharsetUTF8)
-	if err != nil {
-		return
-	}
-	err = enc.Encode(i)
-	return
-}
-
-func (c *context) JSON(code Status, i interface{}) (err error) {
-	indent := ""
-	if c.gig.Debug {
-		indent = defaultIndent
-	}
-	return c.json(code, i, indent)
-}
-
-func (c *context) JSONPretty(code Status, i interface{}, indent string) (err error) {
-	return c.json(code, i, indent)
-}
-
-func (c *context) JSONBlob(code Status, b []byte) (err error) {
-	return c.Blob(code, MIMEApplicationJSONCharsetUTF8, b)
-}
-
-func (c *context) xml(code Status, i interface{}, indent string) (err error) {
-	err = c.response.WriteHeader(code, MIMEApplicationXMLCharsetUTF8)
-	if err != nil {
-		return
-	}
-	enc := xml.NewEncoder(c.response)
-	if indent != "" {
-		enc.Indent("", indent)
-	}
-	if _, err = c.response.Write([]byte(xml.Header)); err != nil {
-		return
-	}
-	return enc.Encode(i)
-}
-
-func (c *context) XML(code Status, i interface{}) (err error) {
-	indent := ""
-	if c.gig.Debug {
-		indent = defaultIndent
-	}
-	return c.xml(code, i, indent)
-}
-
-func (c *context) XMLPretty(code Status, i interface{}, indent string) (err error) {
-	return c.xml(code, i, indent)
-}
-
-func (c *context) XMLBlob(code Status, b []byte) (err error) {
-	err = c.response.WriteHeader(code, MIMEApplicationXMLCharsetUTF8)
-	if err != nil {
-		return
-	}
-	if _, err = c.response.Write([]byte(xml.Header)); err != nil {
-		return
-	}
-	_, err = c.response.Write(b)
-	return
-}
-
 func (c *context) Blob(code Status, contentType string, b []byte) (err error) {
 	err = c.response.WriteHeader(code, contentType)
 	if err != nil {
@@ -364,7 +267,7 @@ func (c *context) File(file string) (err error) {
 				continue
 			}
 
-			_, _ = c.response.Write([]byte(fmt.Sprintf("=> %s %s [ %v ]\n", filepath.Clean(path.Join(c.path, file.Name())), file.Name(), bytefmt.ByteSize(uint64(file.Size())))))
+			_, _ = c.response.Write([]byte(fmt.Sprintf("=> %s %s [ %v ]\n", filepath.Clean(path.Join(c.path, file.Name())), file.Name(), bytefmt(file.Size()))))
 		}
 		return nil
 	}
@@ -431,18 +334,6 @@ func (c *context) SetHandler(h HandlerFunc) {
 	c.handler = h
 }
 
-func (c *context) Logger() Logger {
-	res := c.logger
-	if res != nil {
-		return res
-	}
-	return c.gig.Logger
-}
-
-func (c *context) SetLogger(l Logger) {
-	c.logger = l
-}
-
 func (c *context) Reset(conn net.Conn, u *url.URL, requestURI string, tls *tls.ConnectionState) {
 	c.conn = conn
 	c.TLS = tls
@@ -453,9 +344,21 @@ func (c *context) Reset(conn net.Conn, u *url.URL, requestURI string, tls *tls.C
 	c.store = nil
 	c.path = ""
 	c.pnames = nil
-	c.logger = nil
 	// NOTE: Don't reset because it has to have length c.gig.maxParam at all times
 	for i := 0; i < *c.gig.maxParam; i++ {
 		c.pvalues[i] = ""
 	}
+}
+
+func bytefmt(b int64) string {
+        const unit = 1000
+        if b < unit {
+                return fmt.Sprintf("%dB", b)
+        }
+        div, exp := int64(unit), 0
+        for n := b / unit; n >= unit; n /= unit {
+                div *= unit
+                exp++
+        }
+        return fmt.Sprintf("%.1f%cB", float64(b)/float64(div), "kMGTPE"[exp])
 }

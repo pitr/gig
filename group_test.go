@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/matryer/is"
 )
 
 // TODO: Fix me
@@ -21,10 +21,13 @@ func TestGroupFile(t *testing.T) {
 	g := gig.Group("/group")
 	g.File("/walle", "_fixture/images/walle.png")
 	expectedData, err := ioutil.ReadFile("_fixture/images/walle.png")
-	assert.Nil(t, err)
+
+	is := is.New(t)
+
+	is.NoErr(err)
 	c := newContext("/group/walle")
 	gig.ServeGemini(c)
-	assert.Equal(t, "20 image/png\r\n"+string(expectedData), c.(*context).conn.(*fakeConn).Written)
+	is.Equal("20 image/png\r\n"+string(expectedData), c.(*context).conn.(*fakeConn).Written)
 }
 
 func TestGroupRouteMiddleware(t *testing.T) {
@@ -61,10 +64,12 @@ func TestGroupRouteMiddleware(t *testing.T) {
 	g.Handle("/40_1", h, m4)
 	g.Handle("/40_2", h, m5)
 
+	is := is.New(t)
+
 	b := request("/group/40_1", gig)
-	assert.Equal(t, "40 oops\r\n", b)
+	is.Equal("40 oops\r\n", b)
 	b = request("/group/40_2", gig)
-	assert.Equal(t, "40 another\r\n", b)
+	is.Equal("40 another\r\n", b)
 }
 
 func TestGroupRouteMiddlewareWithMatchAny(t *testing.T) {
@@ -91,17 +96,19 @@ func TestGroupRouteMiddlewareWithMatchAny(t *testing.T) {
 	gig.Handle("unrelated", h, m2)
 	gig.Handle("*", h, m2)
 
+	is := is.New(t)
+
 	b := request("/group/help", gig)
-	assert.Equal(t, "20 text/plain; charset=UTF-8\r\n/group/help", b)
+	is.Equal("20 text/plain; charset=UTF-8\r\n/group/help", b)
 	b = request("/group/help/other", gig)
-	assert.Equal(t, "20 text/plain; charset=UTF-8\r\n/group/*", b)
+	is.Equal("20 text/plain; charset=UTF-8\r\n/group/*", b)
 	b = request("/group/404", gig)
-	assert.Equal(t, "20 text/plain; charset=UTF-8\r\n/group/*", b)
+	is.Equal("20 text/plain; charset=UTF-8\r\n/group/*", b)
 	b = request("/group", gig)
-	assert.Equal(t, "20 text/plain; charset=UTF-8\r\n/group", b)
+	is.Equal("20 text/plain; charset=UTF-8\r\n/group", b)
 	b = request("/other", gig)
-	assert.Equal(t, "20 text/plain; charset=UTF-8\r\n/*", b)
+	is.Equal("20 text/plain; charset=UTF-8\r\n/*", b)
 	b = request("/", gig)
-	assert.Equal(t, "20 text/plain; charset=UTF-8\r\n", b)
+	is.Equal("20 text/plain; charset=UTF-8\r\n", b)
 
 }

@@ -24,10 +24,10 @@ Example:
     g.Use(middleware.Recover())
 
     // Routes
-    g.GET("/", hello)
+    g.Handle("/", hello)
 
     // Start server
-    g.Logger.Fatal(g.StartAutoTLS(":1323"))
+    g.Run(":1323", "my.crt", "my.key")
   }
 */
 package gig
@@ -48,18 +48,12 @@ import (
 	"runtime"
 	"sync"
 	"time"
-
-	"github.com/labstack/gommon/color"
-	"github.com/labstack/gommon/log"
-	"golang.org/x/crypto/acme"
-	"golang.org/x/crypto/acme/autocert"
 )
 
 type (
 	// Gig is the top-level framework instance.
 	Gig struct {
 		common
-		colorer            *color.Color
 		premiddleware      []MiddlewareFunc
 		middleware         []MiddlewareFunc
 		maxParam           *int
@@ -73,14 +67,11 @@ type (
 		doneChan           chan struct{}
 		closeOnce          sync.Once
 		mu                 sync.Mutex
-		AutoTLSManager     autocert.Manager
-		Debug              bool
 		HideBanner         bool
 		HidePort           bool
 		GeminiErrorHandler GeminiErrorHandler
 		Validator          Validator
 		Renderer           Renderer
-		Logger             Logger
 	}
 
 	// Route contains a handler and information for matching against requests.
@@ -152,7 +143,6 @@ const (
 /___/  /___/   %s
 
 `
-	defaultLogHeader = "level=${level} src=${short_file}:${line}"
 )
 
 // Errors
@@ -194,17 +184,10 @@ func New() (g *Gig) {
 		TLSConfig: &tls.Config{
 			MinVersion: tls.VersionTLS12,
 		},
-		AutoTLSManager: autocert.Manager{
-			Prompt: autocert.AcceptTOS,
-		},
-		Logger:   log.New("gig"),
-		colorer:  color.New(),
 		maxParam: new(int),
 		doneChan: make(chan struct{}),
 	}
 	g.GeminiErrorHandler = g.DefaultGeminiErrorHandler
-	g.Logger.SetLevel(log.ERROR)
-	g.Logger.SetHeader(defaultLogHeader)
 	g.pool.New = func() interface{} {
 		return g.NewContext(nil, nil, "", nil)
 	}
@@ -219,7 +202,7 @@ func (g *Gig) NewContext(c net.Conn, u *url.URL, requestURI string, tls *tls.Con
 		TLS:        tls,
 		u:          u,
 		requestURI: requestURI,
-		response:   NewResponse(c, g.Logger),
+		response:   NewResponse(c),
 		store:      make(Map),
 		gig:        g,
 		pvalues:    make([]string, *g.maxParam),
@@ -245,15 +228,13 @@ func (g *Gig) DefaultGeminiErrorHandler(err error, c Context) {
 
 	code := he.Code
 	message := he.Message
-	if g.Debug {
-		message = err.Error()
-	}
+	debugPrint("%s", err)
 
 	// Send response
 	if !c.Response().Committed {
 		err = c.NoContent(code, message)
 		if err != nil {
-			g.Logger.Error(err)
+			debugPrint("%s", err)
 		}
 	}
 }
@@ -445,24 +426,12 @@ func filepathOrContent(fileOrContent interface{}) (content []byte, err error) {
 	}
 }
 
-// StartAutoTLS starts a Gemini server using certificates automatically installed from https://letsencrypt.org.
-func (g *Gig) StartAutoTLS(address string) error {
-	g.TLSConfig.GetCertificate = g.AutoTLSManager.GetCertificate
-	g.TLSConfig.NextProtos = append(g.TLSConfig.NextProtos, acme.ALPNProto)
-	return g.startTLS(address)
-}
-
 func (g *Gig) startTLS(address string) error {
 	g.Addr = address
 
 	// Setup
-	g.colorer.SetOutput(g.Logger.Output())
-	if g.Debug {
-		g.Logger.SetLevel(log.DEBUG)
-	}
-
 	if !g.HideBanner {
-		g.colorer.Printf(banner, g.colorer.Red("v"+Version))
+		debugPrint(banner, "v"+Version)
 	}
 
 	g.mu.Lock()
@@ -477,7 +446,7 @@ func (g *Gig) startTLS(address string) error {
 	defer g.Listener.Close()
 
 	if !g.HidePort {
-		g.colorer.Printf("⇨ gemini server started on %s\n", g.colorer.Green(g.Listener.Addr()))
+		debugPrint("⇨ gemini server started on %s\n", g.Listener.Addr())
 	}
 	return g.serve()
 }
@@ -503,7 +472,7 @@ func (g *Gig) serve() error {
 				if max := 1 * time.Second; tempDelay > max {
 					tempDelay = max
 				}
-				g.Logger.Errorf("gemini: Accept error: %v; retrying in %v", err, tempDelay)
+				debugPrint("gemini: Accept error: %v; retrying in %v", err, tempDelay)
 				time.Sleep(tempDelay)
 				continue
 			}
@@ -512,7 +481,7 @@ func (g *Gig) serve() error {
 
 		tc, ok := conn.(*tls.Conn)
 		if !ok {
-			g.Logger.Errorf("gemini: non-tls connection")
+			debugPrint("gemini: non-tls connection")
 			continue
 		}
 
@@ -526,24 +495,24 @@ func (g *Gig) handleRequest(conn *tls.Conn) {
 	if d := g.ReadTimeout; d != 0 {
 		err := conn.SetReadDeadline(time.Now().Add(d))
 		if err != nil {
-			g.Logger.Error(err)
+			debugPrint("%s", err)
 		}
 	}
 
 	reader := bufio.NewReaderSize(conn, 1024)
 	request, overflow, err := reader.ReadLine()
 	if overflow {
-		_ = NewResponse(conn, g.Logger).WriteHeader(StatusBadRequest, "Request too long!")
+		_ = NewResponse(conn).WriteHeader(StatusBadRequest, "Request too long!")
 		return
 	} else if err != nil {
-		_ = NewResponse(conn, g.Logger).WriteHeader(StatusBadRequest, "Unknown error reading request! "+err.Error())
+		_ = NewResponse(conn).WriteHeader(StatusBadRequest, "Unknown error reading request! "+err.Error())
 		return
 	}
 
 	RequestURI := string(request)
 	URL, err := url.Parse(RequestURI)
 	if err != nil {
-		_ = NewResponse(conn, g.Logger).WriteHeader(StatusBadRequest, "Error parsing URL!")
+		_ = NewResponse(conn).WriteHeader(StatusBadRequest, "Error parsing URL!")
 		return
 	}
 	if URL.Scheme == "" {
@@ -551,14 +520,14 @@ func (g *Gig) handleRequest(conn *tls.Conn) {
 	}
 
 	if URL.Scheme != "gemini" {
-		_ = NewResponse(conn, g.Logger).WriteHeader(StatusBadRequest, "No proxying to non-Gemini content!")
+		_ = NewResponse(conn).WriteHeader(StatusBadRequest, "No proxying to non-Gemini content!")
 		return
 	}
 
 	if d := g.WriteTimeout; d != 0 {
 		err := conn.SetWriteDeadline(time.Now().Add(d))
 		if err != nil {
-			g.Logger.Error(err)
+			debugPrint("%s", err)
 		}
 	}
 
@@ -660,3 +629,4 @@ func applyMiddleware(h HandlerFunc, middleware ...MiddlewareFunc) HandlerFunc {
 	}
 	return h
 }
+

@@ -2,12 +2,12 @@ package middleware
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"strconv"
 	"sync"
 	"time"
 
-	"github.com/labstack/gommon/color"
 	"github.com/pitr/gig"
 	"github.com/valyala/fasttemplate"
 )
@@ -46,12 +46,7 @@ type (
 		// Optional. Default value DefaultLoggerConfig.CustomTimeFormat.
 		CustomTimeFormat string `yaml:"custom_time_format"`
 
-		// Output is a writer where logs in JSON format are written.
-		// Optional. Default value os.Stdout.
-		Output io.Writer
-
 		template *fasttemplate.Template
-		colorer  *color.Color
 		pool     *sync.Pool
 	}
 )
@@ -62,7 +57,6 @@ var (
 		Skipper:          DefaultSkipper,
 		Format:           "path=${path} status=${status} duration=${latency} ${error}\n",
 		CustomTimeFormat: "2006-01-02 15:04:05.00000",
-		colorer:          color.New(),
 	}
 )
 
@@ -81,13 +75,8 @@ func LoggerWithConfig(config LoggerConfig) gig.MiddlewareFunc {
 	if config.Format == "" {
 		config.Format = DefaultLoggerConfig.Format
 	}
-	if config.Output == nil {
-		config.Output = DefaultLoggerConfig.Output
-	}
 
 	config.template = fasttemplate.New(config.Format, "${", "}")
-	config.colorer = color.New()
-	config.colorer.SetOutput(config.Output)
 	config.pool = &sync.Pool{
 		New: func() interface{} {
 			return bytes.NewBuffer(make([]byte, 256))
@@ -136,19 +125,7 @@ func LoggerWithConfig(config LoggerConfig) gig.MiddlewareFunc {
 					}
 					return buf.WriteString(p)
 				case "status":
-					n := res.Status
-					s := config.colorer.Green(n)
-					switch {
-					case n >= 60:
-						s = config.colorer.Magenta(n)
-					case n >= 50:
-						s = config.colorer.Red(n)
-					case n >= 40:
-						s = config.colorer.Yellow(n)
-					case n >= 30:
-						s = config.colorer.Cyan(n)
-					}
-					return buf.WriteString(s)
+					return buf.WriteString(strconv.FormatInt(int64(res.Status), 10))
 				case "error":
 					if err != nil {
 						return buf.WriteString(err.Error())
@@ -173,11 +150,7 @@ func LoggerWithConfig(config LoggerConfig) gig.MiddlewareFunc {
 				return
 			}
 
-			if config.Output == nil {
-				_, err = c.Logger().Output().Write(buf.Bytes())
-				return
-			}
-			_, err = config.Output.Write(buf.Bytes())
+			fmt.Fprintf(gig.DefaultWriter, buf.String())
 			return
 		}
 	}

@@ -8,8 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/matryer/is"
 )
 
 type (
@@ -35,70 +34,76 @@ const userXMLPretty = `<user>
 </user>`
 
 func TestGig(t *testing.T) {
+	is := is.New(t)
+
 	g := New()
 	c := newContext("/").(*context)
 
 	// Router
-	assert.NotNil(t, g.Router())
+	is.True(g.Router() != nil)
 
 	// DefaultGeminiErrorHandler
 	g.DefaultGeminiErrorHandler(errors.New("error"), c)
-	assert.Equal(t, "50 error\r\n", c.conn.(*fakeConn).Written)
+	is.Equal("50 error\r\n", c.conn.(*fakeConn).Written)
 }
 
 func TestGigStatic(t *testing.T) {
-	g := New()
+	is := is.New(t)
 
-	assert := assert.New(t)
+	g := New()
 
 	// OK
 	g.Static("/images", "_fixture/images")
 	b := request("/images/walle.png", g)
-	assert.Equal(true, strings.HasPrefix(b, "20 image/png\r\n"))
+	is.True(strings.HasPrefix(b, "20 image/png\r\n"))
 
 	// No file
 	g.Static("/images", "_fixture/scripts")
 	b = request("/images/bolt.png", g)
-	assert.Equal("51 Not Found\r\n", b)
+	is.Equal("51 Not Found\r\n", b)
 
 	// Directory
 	g.Static("/images", "_fixture/images")
 	b = request("/images", g)
-	assert.Equal("51 Not Found\r\n", b)
+	is.Equal("51 Not Found\r\n", b)
 
 	// Directory with index.gmi
 	g.Static("/", "_fixture")
 	b = request("/", g)
-	assert.Equal("20 text/gemini\r\n# Hello from gig\n\n=> / 🏠 Home\n", b)
+	is.Equal("20 text/gemini\r\n# Hello from gig\n\n=> / 🏠 Home\n", b)
 
 	// Sub-directory with index.gmi
 	b = request("/folder", g)
-	assert.Equal("20 text/gemini\r\n# Listing _fixture/folder\n\n=> /*/about.gmi about.gmi [ 29B ]\n=> /*/another.blah another.blah [ 14B ]\n", b)
+	is.Equal("20 text/gemini\r\n# Listing _fixture/folder\n\n=> /*/about.gmi about.gmi [ 29B ]\n=> /*/another.blah another.blah [ 14B ]\n", b)
 
 	// File without known mime
 	b = request("/folder/another.blah", g)
-	assert.Equal("20 octet/stream\r\n# Another page", b)
+	is.Equal("20 octet/stream\r\n# Another page", b)
 
 	// Escape
 	g.Static("/escape", "")
 	b = request("/escape/../../", g)
-	assert.Equal(true, strings.Contains(b, "/escape/*/gig.go"))
+	is.True(strings.Contains(b, "/escape/*/gig.go"))
 }
 
 func TestGigFile(t *testing.T) {
+	is := is.New(t)
+
 	g := New()
 	g.File("/walle", "_fixture/images/walle.png")
 	b := request("/walle", g)
-	assert.Equal(t, true, strings.HasPrefix(b, "20 "))
+	is.True(strings.HasPrefix(b, "20 "))
 }
 
 func TestGigMiddleware(t *testing.T) {
+	is := is.New(t)
+
 	g := New()
 	buf := new(bytes.Buffer)
 
 	g.Pre(func(next HandlerFunc) HandlerFunc {
 		return func(c Context) error {
-			assert.Empty(t, c.Path())
+			is.True(c.Path() == "")
 			buf.WriteString("-1")
 			return next(c)
 		}
@@ -131,11 +136,13 @@ func TestGigMiddleware(t *testing.T) {
 	})
 
 	b := request("/", g)
-	assert.Equal(t, "-1123", buf.String())
-	assert.Equal(t, "20 text/plain; charset=UTF-8\r\nOK", b)
+	is.Equal("-1123", buf.String())
+	is.Equal("20 text/plain; charset=UTF-8\r\nOK", b)
 }
 
 func TestGigMiddlewareError(t *testing.T) {
+	is := is.New(t)
+
 	g := New()
 	g.Use(func(next HandlerFunc) HandlerFunc {
 		return func(c Context) error {
@@ -144,10 +151,12 @@ func TestGigMiddlewareError(t *testing.T) {
 	})
 	g.Handle("/", NotFoundHandler)
 	b := request("/", g)
-	assert.Equal(t, "50 oops\r\n", b)
+	is.Equal("50 oops\r\n", b)
 }
 
 func TestGigHandler(t *testing.T) {
+	is := is.New(t)
+
 	g := New()
 
 	// HandlerFunc
@@ -156,19 +165,23 @@ func TestGigHandler(t *testing.T) {
 	})
 
 	b := request("/ok", g)
-	assert.Equal(t, "20 text/plain; charset=UTF-8\r\nOK", b)
+	is.Equal("20 text/plain; charset=UTF-8\r\nOK", b)
 }
 
 func TestGigHandle(t *testing.T) {
+	is := is.New(t)
+
 	g := New()
 	g.Handle("/", func(c Context) error {
 		return c.Text(StatusSuccess, "hello")
 	})
 	b := request("/", g)
-	assert.Equal(t, "20 text/plain; charset=UTF-8\r\nhello", b)
+	is.Equal("20 text/plain; charset=UTF-8\r\nhello", b)
 }
 
 func TestGigURL(t *testing.T) {
+	is := is.New(t)
+
 	g := New()
 	static := func(Context) error { return nil }
 	getUser := func(Context) error { return nil }
@@ -179,16 +192,16 @@ func TestGigURL(t *testing.T) {
 	gr := g.Group("/group")
 	gr.Handle("/users/:uid/files/:fid", getFile)
 
-	assert := assert.New(t)
-
-	assert.Equal("/static/file", g.URL(static))
-	assert.Equal("/users/:id", g.URL(getUser))
-	assert.Equal("/users/1", g.URL(getUser, "1"))
-	assert.Equal("/group/users/1/files/:fid", g.URL(getFile, "1"))
-	assert.Equal("/group/users/1/files/1", g.URL(getFile, "1", "1"))
+	is.Equal("/static/file", g.URL(static))
+	is.Equal("/users/:id", g.URL(getUser))
+	is.Equal("/users/1", g.URL(getUser, "1"))
+	is.Equal("/group/users/1/files/:fid", g.URL(getFile, "1"))
+	is.Equal("/group/users/1/files/1", g.URL(getFile, "1", "1"))
 }
 
 func TestGigRoutes(t *testing.T) {
+	is := is.New(t)
+
 	g := New()
 	routes := []*Route{
 		{"/users/:user/events", ""},
@@ -202,33 +215,36 @@ func TestGigRoutes(t *testing.T) {
 		})
 	}
 
-	if assert.Equal(t, len(routes), len(g.Routes())) {
-		for _, r := range g.Routes() {
-			found := false
-			for _, rr := range routes {
-				if r.Path == rr.Path {
-					found = true
-					break
-				}
+	is.Equal(len(routes), len(g.Routes()))
+	for _, r := range g.Routes() {
+		found := false
+		for _, rr := range routes {
+			if r.Path == rr.Path {
+				found = true
+				break
 			}
-			if !found {
-				t.Errorf("Route %s not found", r.Path)
-			}
+		}
+		if !found {
+			t.Errorf("Route %s not found", r.Path)
 		}
 	}
 }
 
 func TestGigEncodedPath(t *testing.T) {
+	is := is.New(t)
+
 	g := New()
 	g.Handle("/:id", func(c Context) error {
 		return c.NoContentSuccess()
 	})
 	c := newContext("/with%2Fslash")
 	g.ServeGemini(c)
-	assert.Equal(t, "20 text/gemini\r\n", c.(*context).conn.(*fakeConn).Written)
+	is.Equal("20 text/gemini\r\n", c.(*context).conn.(*fakeConn).Written)
 }
 
 func TestGigGroup(t *testing.T) {
+	is := is.New(t)
+
 	g := New()
 	buf := new(bytes.Buffer)
 	g.Use(MiddlewareFunc(func(next HandlerFunc) HandlerFunc {
@@ -275,28 +291,33 @@ func TestGigGroup(t *testing.T) {
 	g3.Handle("", h)
 
 	request("/users", g)
-	assert.Equal(t, "0", buf.String())
+	is.Equal("0", buf.String())
 
 	buf.Reset()
 	request("/group1", g)
-	assert.Equal(t, "01", buf.String())
+	is.Equal("01", buf.String())
 
 	buf.Reset()
 	request("/group2/group3", g)
-	assert.Equal(t, "023", buf.String())
+	is.Equal("023", buf.String())
 }
 
 func TestGigNotFound(t *testing.T) {
+	is := is.New(t)
+
 	g := New()
 	c := newContext("/files").(*context)
 	g.ServeGemini(c)
-	assert.Equal(t, "51 Not Found\r\n", c.conn.(*fakeConn).Written)
+	is.Equal("51 Not Found\r\n", c.conn.(*fakeConn).Written)
 }
 
 func TestGigContext(t *testing.T) {
+	is := is.New(t)
+
 	g := New()
 	c := g.AcquireContext()
-	assert.IsType(t, new(context), c)
+	_, ok := c.(*context)
+	is.True(ok)
 	g.ReleaseContext(c)
 }
 
@@ -311,17 +332,21 @@ func TestGigStartTLS(t *testing.T) {
 }
 
 func TestGigStartTLS_BadAddress(t *testing.T) {
+	is := is.New(t)
+
 	g := New()
 	err := g.StartTLS("garbage address", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "address garbage address: missing port in address")
+	is.True(err != nil)
+	is.True(strings.Contains(err.Error(), "address garbage address: missing port in address"))
 }
 
 func TestGigStartTLSByteString(t *testing.T) {
+	is := is.New(t)
+
 	cert, err := ioutil.ReadFile("_fixture/certs/cert.pem")
-	require.NoError(t, err)
+	is.NoErr(err)
 	key, err := ioutil.ReadFile("_fixture/certs/key.pem")
-	require.NoError(t, err)
+	is.NoErr(err)
 
 	switchedCertError := errors.New("tls: failed to find certificate PEM data in certificate input, but did find a private key; PEM inputs may have been switched")
 
@@ -372,38 +397,23 @@ func TestGigStartTLSByteString(t *testing.T) {
 	for _, test := range testCases {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
+			is := is.New(t)
+
 			g := New()
 			g.HideBanner = true
 
 			go func() {
 				err := g.StartTLS(":0", test.cert, test.key)
 				if test.expectedErr != nil {
-					require.EqualError(t, err, test.expectedErr.Error())
+					is.Equal(err.Error(), test.expectedErr.Error())
 				} else if err != ErrServerClosed { // Prevent the test to fail after closing the servers
-					require.NoError(t, err)
+					is.NoErr(err)
 				}
 			}()
 			time.Sleep(200 * time.Millisecond)
 
 			g.Close()
 		})
-	}
-}
-
-func TestGigStartAutoTLS(t *testing.T) {
-	g := New()
-	errChan := make(chan error)
-
-	go func() {
-		errChan <- g.StartAutoTLS(":0")
-	}()
-	time.Sleep(200 * time.Millisecond)
-
-	select {
-	case err := <-errChan:
-		assert.NoError(t, err)
-	default:
-		assert.NoError(t, g.Close())
 	}
 }
 
@@ -414,22 +424,26 @@ func request(path string, g *Gig) string {
 }
 
 func TestGeminiError(t *testing.T) {
+	is := is.New(t)
+
 	t.Run("manual", func(t *testing.T) {
 		err := NewError(StatusSlowDown, "oops")
-		assert.Equal(t, "error=oops", err.Error())
+		is.Equal("error=oops", err.Error())
 
 	})
 	t.Run("existing", func(t *testing.T) {
 		err := ErrSlowDown
-		assert.Equal(t, "error=Slow Down", err.Error())
+		is.Equal("error=Slow Down", err.Error())
 	})
 	t.Run("inherited", func(t *testing.T) {
 		err := NewErrorFrom(ErrSlowDown, "oops")
-		assert.Equal(t, "error=oops", err.Error())
+		is.Equal("error=oops", err.Error())
 	})
 }
 
 func TestGigClose(t *testing.T) {
+	is := is.New(t)
+
 	g := New()
 	errCh := make(chan error)
 
@@ -443,8 +457,8 @@ func TestGigClose(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	assert.Contains(t, g.Close().Error(), "use of closed network connection")
+	is.True(strings.Contains(g.Close().Error(), "use of closed network connection"))
 
 	err := <-errCh
-	assert.Equal(t, err.Error(), "gemini: Server closed")
+	is.Equal(err.Error(), "gemini: Server closed")
 }

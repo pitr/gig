@@ -67,10 +67,10 @@ func RecoverWithConfig(config RecoverConfig) gig.MiddlewareFunc {
 					if !ok {
 						err = fmt.Errorf("%v", r)
 					}
-					stack := make([]byte, config.StackSize)
-					length := runtime.Stack(stack, !config.DisableStackAll)
 					if !config.DisablePrintStack {
-						c.Logger().Printf("[PANIC RECOVER] %v %s\n", err, stack[:length])
+						stack := make([]byte, config.StackSize)
+						length := runtime.Stack(stack, !config.DisableStackAll)
+						fmt.Fprintf(gig.DefaultWriter, "[PANIC RECOVER] %v %s\n", err, stack[:length])
 					}
 					c.Error(err)
 				}

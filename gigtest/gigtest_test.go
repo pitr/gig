@@ -4,52 +4,54 @@ import (
 	"testing"
 	"time"
 
+	"github.com/matryer/is"
 	"github.com/pitr/gig"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestNewContext(t *testing.T) {
-	assert := assert.New(t)
+	is := is.New(t)
 	g := gig.New()
 
 	c, conn := NewContext(g, "/login", nil)
 
-	assert.NoError(c.Response().WriteHeader(gig.StatusGone, "oops"))
-	assert.Equal("52 oops\r\n", conn.Written)
+	is.NoErr(c.Response().WriteHeader(gig.StatusGone, "oops"))
+	is.Equal("52 oops\r\n", conn.Written)
 
 	n, err := conn.Read(make([]byte, 1))
-	assert.Equal(1, n)
-	assert.Nil(err)
+	is.Equal(1, n)
+	is.NoErr(err)
 
 	n, err = conn.Write([]byte("test"))
-	assert.Equal(4, n)
-	assert.Nil(err)
+	is.Equal(4, n)
+	is.NoErr(err)
 
-	assert.Equal(nil, conn.Close())
-	assert.IsType(&FakeAddr{}, conn.LocalAddr())
-	assert.IsType(&FakeAddr{}, conn.RemoteAddr())
-	assert.Equal(nil, conn.SetDeadline(time.Now()))
-	assert.Equal(nil, conn.SetReadDeadline(time.Now()))
-	assert.Equal(nil, conn.SetWriteDeadline(time.Now()))
+	is.Equal(nil, conn.Close())
+	is.Equal(conn.LocalAddr().String(), "192.0.2.1:25")
+	is.Equal(conn.RemoteAddr().String(), "192.0.2.1:25")
+	is.Equal(nil, conn.SetDeadline(time.Now()))
+	is.Equal(nil, conn.SetReadDeadline(time.Now()))
+	is.Equal(nil, conn.SetWriteDeadline(time.Now()))
 }
 
 func TestFakeAddr(t *testing.T) {
-	assert := assert.New(t)
+	is := is.New(t)
 	addr := &FakeAddr{}
 
-	assert.Equal("tcp", addr.Network())
-	assert.Equal("192.0.2.1:25", addr.String())
+	is.Equal("tcp", addr.Network())
+	is.Equal("192.0.2.1:25", addr.String())
 }
 
 func TestFakeConn(t *testing.T) {
-	assert := assert.New(t)
+	is := is.New(t)
 	conn := &FakeConn{FailAfter: 5}
 
 	n, err := conn.Write([]byte("test"))
-	assert.Equal(4, n)
-	assert.Nil(err)
+	is.Equal(4, n)
+	is.NoErr(err)
 
 	n, err = conn.Write([]byte("more"))
-	assert.Equal(1, n)
-	assert.NotNil(err)
+	is.Equal(1, n)
+	if err == nil {
+		is.Fail()
+	}
 }

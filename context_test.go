@@ -4,18 +4,14 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
-	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"strings"
 	"testing"
 	"text/template"
 
-	"github.com/labstack/gommon/log"
-	testify "github.com/stretchr/testify/assert"
+	"github.com/matryer/is"
 )
 
 type (
@@ -43,16 +39,16 @@ func (responseWriterErr) WriteHeader(statusCode Status, mime string) {}
 func TestContext(t *testing.T) {
 	c := newContext("/").(*context)
 
-	assert := testify.New(t)
+	is := is.New(t)
 
 	// Gig
-	assert.NotNil(c.Gig())
+	is.True(c.Gig() != nil)
 
 	// Conn
-	assert.NotNil(c.conn)
+	is.True(c.conn != nil)
 
 	// Response
-	assert.NotNil(c.Response())
+	is.True(c.Response() != nil)
 
 	//--------
 	// Render
@@ -62,219 +58,60 @@ func TestContext(t *testing.T) {
 		templates: template.Must(template.New("hello").Parse("Hello, {{.}}!")),
 	}
 	err := c.Render(StatusSuccess, "hello", "Jon Snow")
-	if assert.NoError(err) {
-		assert.Equal(fmt.Sprintf("%d %s\r\nHello, Jon Snow!", StatusSuccess, MIMETextGeminiCharsetUTF8), c.conn.(*fakeConn).Written)
-	}
+	is.NoErr(err)
+	is.Equal(fmt.Sprintf("%d %s\r\nHello, Jon Snow!", StatusSuccess, MIMETextGeminiCharsetUTF8), c.conn.(*fakeConn).Written)
 
 	c.gig.Renderer = &TemplateFail{}
 	err = c.Render(StatusSuccess, "hello", "Jon Snow")
-	assert.Error(err)
+	is.True(err != nil)
 
 	c.gig.Renderer = nil
 	err = c.Render(StatusSuccess, "hello", "Jon Snow")
-	assert.Error(err)
-
-	// JSON
-	c = newContext("/").(*context)
-
-	err = c.JSON(StatusSuccess, user{1, "Jon Snow"})
-	if assert.NoError(err) {
-		assert.Equal(fmt.Sprintf("%d %s\r\n%s\n", StatusSuccess, MIMEApplicationJSONCharsetUTF8, userJSON), c.conn.(*fakeConn).Written)
-	}
-
-	// JSONPretty
-	c = newContext("/").(*context)
-
-	err = c.JSONPretty(StatusSuccess, user{1, "Jon Snow"}, "  ")
-	if assert.NoError(err) {
-		assert.Equal(fmt.Sprintf("%d %s\r\n%s\n", StatusSuccess, MIMEApplicationJSONCharsetUTF8, userJSONPretty), c.conn.(*fakeConn).Written)
-	}
-
-	// JSON (error)
-	c = newContext("/").(*context)
-
-	err = c.JSON(StatusSuccess, make(chan bool))
-	assert.Error(err)
-
-	// XML
-	c = newContext("/").(*context)
-
-	err = c.XML(StatusSuccess, user{1, "Jon Snow"})
-	if assert.NoError(err) {
-		assert.Equal(fmt.Sprintf("%d %s\r\n%s", StatusSuccess, MIMEApplicationXMLCharsetUTF8, xml.Header+userXML), c.conn.(*fakeConn).Written)
-	}
-
-	// XML (error)
-	c = newContext("/").(*context)
-
-	err = c.XML(StatusSuccess, make(chan bool))
-	assert.Error(err)
-
-	// XML response write error
-	c = newContext("/").(*context)
-
-	c.response.Writer = responseWriterErr{}
-	err = c.XML(0, 0)
-	testify.Error(t, err)
-
-	// XMLPretty
-	c = newContext("/").(*context)
-
-	err = c.XMLPretty(StatusSuccess, user{1, "Jon Snow"}, "  ")
-	if assert.NoError(err) {
-		assert.Equal(fmt.Sprintf("%d %s\r\n%s", StatusSuccess, MIMEApplicationXMLCharsetUTF8, xml.Header+userXMLPretty), c.conn.(*fakeConn).Written)
-	}
-
-	t.Run("empty indent", func(t *testing.T) {
-		var (
-			u           = user{1, "Jon Snow"}
-			buf         = new(bytes.Buffer)
-			emptyIndent = ""
-		)
-
-		t.Run("json", func(t *testing.T) {
-			buf.Reset()
-			assert := testify.New(t)
-
-			// JSONBlob with empty indent
-			c := newContext("/").(*context)
-
-			enc := json.NewEncoder(buf)
-			enc.SetIndent(emptyIndent, emptyIndent)
-			err = enc.Encode(u)
-			err = c.json(StatusSuccess, user{1, "Jon Snow"}, emptyIndent)
-			if assert.NoError(err) {
-				assert.Equal(fmt.Sprintf("%d %s\r\n%s", StatusSuccess, MIMEApplicationJSONCharsetUTF8, buf.String()), c.conn.(*fakeConn).Written)
-			}
-
-			c = newContext("/").(*context)
-			c.conn.(*fakeConn).failAfter = 1
-			assert.Error(c.json(StatusSuccess, user{1, "Jon Snow"}, emptyIndent))
-		})
-
-		t.Run("xml", func(t *testing.T) {
-			buf.Reset()
-			assert := testify.New(t)
-
-			// XMLBlob with empty indent
-			c := newContext("/").(*context)
-
-			enc := xml.NewEncoder(buf)
-			enc.Indent(emptyIndent, emptyIndent)
-			err = enc.Encode(u)
-			err = c.xml(StatusSuccess, user{1, "Jon Snow"}, emptyIndent)
-			if assert.NoError(err) {
-				assert.Equal(fmt.Sprintf("%d %s\r\n%s", StatusSuccess, MIMEApplicationXMLCharsetUTF8, xml.Header+buf.String()), c.conn.(*fakeConn).Written)
-			}
-
-			c = newContext("/").(*context)
-			c.conn.(*fakeConn).failAfter = 1
-			assert.Error(c.xml(StatusSuccess, user{1, "Jon Snow"}, emptyIndent))
-
-			c = newContext("/").(*context)
-			c.conn.(*fakeConn).failAfter = 40
-			assert.Error(c.xml(StatusSuccess, user{1, "Jon Snow"}, emptyIndent))
-		})
-	})
-
-	// JSONBlob
-	c = newContext("/").(*context)
-
-	data, err := json.Marshal(user{1, "Jon Snow"})
-	assert.NoError(err)
-	err = c.JSONBlob(StatusSuccess, data)
-	if assert.NoError(err) {
-		assert.Equal(fmt.Sprintf("%d %s\r\n%s", StatusSuccess, MIMEApplicationJSONCharsetUTF8, userJSON), c.conn.(*fakeConn).Written)
-	}
-
-	c = newContext("/").(*context)
-	c.conn.(*fakeConn).failAfter = 1
-	assert.Error(c.JSONBlob(StatusSuccess, data))
-
-	// XMLBlob
-	c = newContext("/").(*context)
-
-	data, err = xml.Marshal(user{1, "Jon Snow"})
-	assert.NoError(err)
-	err = c.XMLBlob(StatusSuccess, data)
-	if assert.NoError(err) {
-		assert.Equal(fmt.Sprintf("%d %s\r\n%s", StatusSuccess, MIMEApplicationXMLCharsetUTF8, xml.Header+userXML), c.conn.(*fakeConn).Written)
-	}
-
-	c = newContext("/").(*context)
-	c.conn.(*fakeConn).failAfter = 1
-	assert.Error(c.XMLBlob(StatusSuccess, data))
-
-	c = newContext("/").(*context)
-	c.conn.(*fakeConn).failAfter = 40
-	assert.Error(c.XMLBlob(StatusSuccess, data))
+	is.True(err != nil)
 
 	// Text
 	c = newContext("/").(*context)
 
 	err = c.Text(StatusSuccess, "Hello, World!")
-	if assert.NoError(err) {
-		assert.Equal(fmt.Sprintf("%d %s\r\nHello, World!", StatusSuccess, MIMETextPlainCharsetUTF8), c.conn.(*fakeConn).Written)
-	}
+	is.NoErr(err)
+	is.Equal(fmt.Sprintf("%d %s\r\nHello, World!", StatusSuccess, MIMETextPlainCharsetUTF8), c.conn.(*fakeConn).Written)
 
 	// Gemini
 	c = newContext("/").(*context)
 
 	err = c.Gemini(StatusSuccess, "Hello, World!")
-	if assert.NoError(err) {
-		assert.Equal(fmt.Sprintf("%d %s\r\nHello, World!", StatusSuccess, MIMETextGeminiCharsetUTF8), c.conn.(*fakeConn).Written)
-	}
+	is.NoErr(err)
+	is.Equal(fmt.Sprintf("%d %s\r\nHello, World!", StatusSuccess, MIMETextGeminiCharsetUTF8), c.conn.(*fakeConn).Written)
 
 	// Stream
 	c = newContext("/").(*context)
 
 	r := strings.NewReader("response from a stream")
 	err = c.Stream(StatusSuccess, "application/octet-stream", r)
-	if assert.NoError(err) {
-		assert.Equal(fmt.Sprintf("%d application/octet-stream\r\nresponse from a stream", StatusSuccess), c.conn.(*fakeConn).Written)
-	}
+	is.NoErr(err)
+	is.Equal(fmt.Sprintf("%d application/octet-stream\r\nresponse from a stream", StatusSuccess), c.conn.(*fakeConn).Written)
 
 	c = newContext("/").(*context)
 	c.conn.(*fakeConn).failAfter = 1
-	assert.Error(c.Stream(StatusSuccess, "application/octet-stream", r))
+	is.True(c.Stream(StatusSuccess, "application/octet-stream", r) != nil)
 
 	// NoContentSuccess
 	c = newContext("/").(*context)
 
 	_ = c.NoContentSuccess()
-	assert.Equal(fmt.Sprintf("%d text/gemini\r\n", StatusSuccess), c.conn.(*fakeConn).Written)
+	is.Equal(fmt.Sprintf("%d text/gemini\r\n", StatusSuccess), c.conn.(*fakeConn).Written)
 
 	// Error
 	c = newContext("/").(*context)
 
 	c.Error(errors.New("error"))
-	assert.Equal(fmt.Sprintf("%d error\r\n", StatusPermanentFailure), c.conn.(*fakeConn).Written)
+	is.Equal(fmt.Sprintf("%d error\r\n", StatusPermanentFailure), c.conn.(*fakeConn).Written)
 
 	// Reset
 	c.Set("foe", "ban")
 	c.Reset(nil, nil, "", nil)
-	assert.Equal(0, len(c.store))
-	assert.Equal("", c.Path())
-}
-
-func TestContext_JSON_CommitsCustomResponseCode(t *testing.T) {
-	c := newContext("/").(*context)
-
-	err := c.JSON(StatusSuccess, user{1, "Jon Snow"})
-
-	assert := testify.New(t)
-	if assert.NoError(err) {
-		assert.Equal(fmt.Sprintf("%d %s\r\n%s\n", StatusSuccess, MIMEApplicationJSONCharsetUTF8, userJSON), c.conn.(*fakeConn).Written)
-	}
-}
-
-func TestContext_JSON_HandlesBadJSON(t *testing.T) {
-	c := newContext("/").(*context)
-
-	err := c.JSON(StatusSuccess, map[string]float64{"a": math.NaN()})
-
-	assert := testify.New(t)
-	assert.Error(err)
+	is.Equal(0, len(c.store))
+	is.Equal("", c.Path())
 }
 
 func TestContextPath(t *testing.T) {
@@ -285,14 +122,14 @@ func TestContextPath(t *testing.T) {
 	c := g.NewContext(nil, nil, "", nil)
 	r.Find("/users/1", c)
 
-	assert := testify.New(t)
+	is := is.New(t)
 
-	assert.Equal("/users/:id", c.Path())
+	is.Equal("/users/:id", c.Path())
 
 	r.Add("/users/:uid/files/:fid", nil)
 	c = g.NewContext(nil, nil, "", nil)
 	r.Find("/users/1/files/1", c)
-	assert.Equal("/users/:uid/files/:fid", c.Path())
+	is.Equal("/users/:uid/files/:fid", c.Path())
 }
 
 func TestContextRequestURI(t *testing.T) {
@@ -300,9 +137,9 @@ func TestContextRequestURI(t *testing.T) {
 
 	c := g.NewContext(nil, nil, "/my-uri", nil)
 
-	assert := testify.New(t)
+	is := is.New(t)
 
-	assert.Equal("/my-uri", c.RequestURI())
+	is.Equal("/my-uri", c.RequestURI())
 }
 
 func TestContextGetParam(t *testing.T) {
@@ -311,27 +148,29 @@ func TestContextGetParam(t *testing.T) {
 	r.Add("/:foo", func(Context) error { return nil })
 	c := newContext("/bar")
 
+	is := is.New(t)
+
 	// round-trip param values with modification
-	testify.Equal(t, "", c.Param("bar"))
+	is.Equal("", c.Param("bar"))
 
 	// shouldn't explode during Reset() afterwards!
-	testify.NotPanics(t, func() {
-		c.Reset(nil, nil, "", nil)
-	})
+	c.Reset(nil, nil, "", nil)
 }
 
 func TestContextRedirect(t *testing.T) {
 	c := newContext("/").(*context)
+	is := is.New(t)
 
-	testify.Equal(t, nil, c.Redirect(StatusRedirectPermanent, "gemini://gus.guru/"))
-	testify.Equal(t, "31 gemini://gus.guru/\r\n", c.conn.(*fakeConn).Written)
-	testify.Error(t, c.Redirect(StatusSuccess, "gemini://gus.guru/"))
+	is.Equal(nil, c.Redirect(StatusRedirectPermanent, "gemini://gus.guru/"))
+	is.Equal("31 gemini://gus.guru/\r\n", c.conn.(*fakeConn).Written)
+	is.True(c.Redirect(StatusSuccess, "gemini://gus.guru/") != nil)
 }
 
 func TestContextStore(t *testing.T) {
 	c := new(context)
 	c.Set("name", "Jon Snow")
-	testify.Equal(t, "Jon Snow", c.Get("name"))
+	is := is.New(t)
+	is.Equal("Jon Snow", c.Get("name"))
 }
 
 func BenchmarkContext_Store(b *testing.B) {
@@ -361,67 +200,60 @@ func TestContextHandler(t *testing.T) {
 	c := g.NewContext(nil, nil, "", nil)
 	r.Find("/handler", c)
 	err := c.Handler()(c)
-	testify.Equal(t, "handler", b.String())
-	testify.NoError(t, err)
+
+	is := is.New(t)
+	is.Equal("handler", b.String())
+	is.NoErr(err)
 }
 
 func TestContext_SetHandler(t *testing.T) {
 	c := new(context)
+	is := is.New(t)
 
-	testify.Nil(t, c.Handler())
+	is.Equal(c.Handler(), nil)
 
 	c.SetHandler(func(c Context) error {
 		return nil
 	})
-	testify.NotNil(t, c.Handler())
+	is.True(c.Handler() != nil)
 }
 
 func TestContext_Path(t *testing.T) {
 	path := "/pa/th"
 
 	c := new(context)
+	is := is.New(t)
 
 	c.SetPath(path)
-	testify.Equal(t, path, c.Path())
+	is.Equal(path, c.Path())
 }
 
 func TestContext_QueryString(t *testing.T) {
 	queryString := "some+val"
 
 	c := newContext("/?" + queryString)
+	is := is.New(t)
 
-	testify.Equal(t, queryString, c.QueryString())
-}
-
-func TestContext_Logger(t *testing.T) {
-	c := newContext("/")
-
-	log1 := c.Logger()
-	testify.NotNil(t, log1)
-
-	log2 := log.New("gig2")
-	c.SetLogger(log2)
-	testify.Equal(t, log2, c.Logger())
-
-	// Resetting the context returns the initial logger
-	c.Reset(nil, nil, "", nil)
-	testify.Equal(t, log1, c.Logger())
+	is.Equal(queryString, c.QueryString())
 }
 
 func TestContext_IP(t *testing.T) {
 	c := newContext("/").(*context)
 
-	testify.Equal(t, "192.0.2.1", c.IP())
+	is := is.New(t)
+	is.Equal("192.0.2.1", c.IP())
 }
 
 func TestContext_Certificate(t *testing.T) {
 	c := newContext("/").(*context)
-	testify.Nil(t, c.Certificate())
+	is := is.New(t)
+
+	is.Equal(c.Certificate(), nil)
 
 	cert := &x509.Certificate{}
 	c.TLS = &tls.ConnectionState{
 		PeerCertificates: []*x509.Certificate{cert},
 	}
 
-	testify.Equal(t, cert, c.Certificate())
+	is.Equal(cert, c.Certificate())
 }
