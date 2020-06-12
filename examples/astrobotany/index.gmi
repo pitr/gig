@@ -1,0 +1,4 @@
+# Astrobotany
+
+=> /plant Get to gardening!
+=> /instructions.gmi Instructions
