@@ -36,8 +36,9 @@ type (
 		// Path returns the registered path for the handler.
 		Path() string
 
-		// QueryString returns the URL query string.
-		QueryString() string
+		// QueryString returns unescaped URL query string or error. Use
+		// Context#URL().RawQuery to get raw query string
+		QueryString() (string, error)
 
 		// RequestURI is the unmodified URL string as sent by the client
 		// to a server. Usually the URL() or Path() should be used instead.
@@ -151,8 +152,8 @@ func (c *context) Param(name string) string {
 	return ""
 }
 
-func (c *context) QueryString() string {
-	return c.u.RawQuery
+func (c *context) QueryString() (string, error) {
+	return url.QueryUnescape(c.u.RawQuery)
 }
 
 func (c *context) Get(key string) interface{} {

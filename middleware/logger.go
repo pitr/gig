@@ -147,7 +147,10 @@ func LoggerWithConfig(config LoggerConfig) gig.MiddlewareFunc {
 				case "meta":
 					return buf.WriteString(res.Meta)
 				case "query":
-					return buf.Write([]byte(c.QueryString()))
+					query, err := c.QueryString()
+					if err == nil {
+						return buf.Write([]byte(query))
+					}
 				}
 				return 0, nil
 			}); err != nil {

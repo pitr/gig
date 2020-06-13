@@ -21,7 +21,9 @@ func main() {
 			return c.NoContent(gig.StatusRedirectTemporary, "/plant")
 		})
 		plant.Handle("/name", func(c gig.Context) error {
-			if name := c.QueryString(); name != "" {
+			if name, err := c.QueryString(); err != nil {
+				return c.NoContent(gig.StatusInput, "Bad input, try again")
+			} else if name != "" {
 				return c.NoContent(gig.StatusRedirectTemporary, "/plant")
 			}
 			return c.NoContent(gig.StatusInput, "Enter a new nickname for your plant")

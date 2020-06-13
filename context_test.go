@@ -214,7 +214,9 @@ func TestContext_QueryString(t *testing.T) {
 	c := newContext("/?" + queryString)
 	is := is.New(t)
 
-	is.Equal(queryString, c.QueryString())
+	q, err := c.QueryString()
+	is.NoErr(err)
+	is.Equal("some val", q)
 }
 
 func TestContext_IP(t *testing.T) {
