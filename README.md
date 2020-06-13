@@ -18,7 +18,6 @@
 - Template rendering with any template engine
 - Define your format for the logger
 - Highly customizable
-- Automatic TLS via Let’s Encrypt
 
 ## Guide
 
