@@ -6,14 +6,17 @@
 [![Codecov](https://img.shields.io/codecov/c/github/pitr/gig.svg?style=flat-square)](https://codecov.io/gh/pitr/gig)
 [![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat-square)](https://raw.githubusercontent.com/pitr/gig/master/LICENSE)
 
+API is subject to change until v1.0
+
 ## Feature Overview
 
+- Client certificate suppport (access `x509.Certificate` directly from context)
 - Optimized router which smartly prioritize routes
 - Group APIs
 - Extensible middleware framework
 - Define middleware at root, group or route level
 - Handy functions to send variety of Gemini responses
-- Centralized Gemini error handling
+- Centralized error handling
 - Template rendering with any template engine
 - Define your format for the logger
 - Highly customizable
