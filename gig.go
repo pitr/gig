@@ -24,7 +24,7 @@ Example:
     })
 
     // Start server
-    panic(g.Run(":1323", "my.crt", "my.key"))
+    panic(g.Run(":1965", "my.crt", "my.key"))
   }
 */
 package gig
