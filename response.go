@@ -16,7 +16,7 @@ type (
 	}
 )
 
-// NewResponse creates a new instance of Response.
+// NewResponse creates a new instance of Response. Typically used for tests.
 func NewResponse(w io.Writer) (r *Response) {
 	return &Response{Writer: w}
 }

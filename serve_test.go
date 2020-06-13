@@ -45,7 +45,7 @@ func TestServe_NetError(t *testing.T) {
 			Err: syscall.EMFILE,
 		}}}
 	g := New()
-	g.Listener = ln
+	g.listener = ln
 	err := g.serve()
 	is.Equal(io.EOF, err)
 }
@@ -59,7 +59,7 @@ func TestServe(t *testing.T) {
 	}()
 	time.Sleep(200 * time.Millisecond)
 
-	addr := g.Listener.Addr().String()
+	addr := g.listener.Addr().String()
 	conn, err := tls.Dial("tcp", addr, &tls.Config{InsecureSkipVerify: true})
 	is.NoErr(err)
 	_, err = conn.Write([]byte("/test\r\n"))
@@ -86,7 +86,7 @@ func TestServe_SlowClient_Read(t *testing.T) {
 	}()
 	time.Sleep(200 * time.Millisecond)
 
-	addr := g.Listener.Addr().String()
+	addr := g.listener.Addr().String()
 	conn, err := tls.Dial("tcp", addr, &tls.Config{InsecureSkipVerify: true})
 	is.NoErr(err)
 
@@ -113,7 +113,7 @@ func TestServe_SlowClient_Write(t *testing.T) {
 	}()
 	time.Sleep(200 * time.Millisecond)
 
-	addr := g.Listener.Addr().String()
+	addr := g.listener.Addr().String()
 	conn, err := tls.Dial("tcp", addr, &tls.Config{InsecureSkipVerify: true})
 	is.NoErr(err)
 	_, err = conn.Write([]byte("/test\r\n"))
@@ -134,7 +134,7 @@ func TestServe_Overflow(t *testing.T) {
 	}()
 	time.Sleep(200 * time.Millisecond)
 
-	addr := g.Listener.Addr().String()
+	addr := g.listener.Addr().String()
 	conn, err := tls.Dial("tcp", addr, &tls.Config{InsecureSkipVerify: true})
 	is.NoErr(err)
 
@@ -160,7 +160,7 @@ func TestServe_NotGemini(t *testing.T) {
 	}()
 	time.Sleep(200 * time.Millisecond)
 
-	addr := g.Listener.Addr().String()
+	addr := g.listener.Addr().String()
 	conn, err := tls.Dial("tcp", addr, &tls.Config{InsecureSkipVerify: true})
 	is.NoErr(err)
 
@@ -186,7 +186,7 @@ func TestServe_NotURL(t *testing.T) {
 	}()
 	time.Sleep(200 * time.Millisecond)
 
-	addr := g.Listener.Addr().String()
+	addr := g.listener.Addr().String()
 	conn, err := tls.Dial("tcp", addr, &tls.Config{InsecureSkipVerify: true})
 	is.NoErr(err)
 

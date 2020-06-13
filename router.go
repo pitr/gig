@@ -5,9 +5,7 @@ import (
 )
 
 type (
-	// Router is the registry of all registered routes for an `Gig` instance for
-	// request matching and URL path parameter parsing.
-	Router struct {
+	router struct {
 		tree   *node
 		routes map[string]*Route
 		gig    *Gig
@@ -32,17 +30,15 @@ const (
 	akind
 )
 
-// NewRouter returns a new Router instance.
-func NewRouter(g *Gig) *Router {
-	return &Router{
+func newRouter(g *Gig) *router {
+	return &router{
 		tree:   &node{},
 		routes: map[string]*Route{},
 		gig:    g,
 	}
 }
 
-// Add registers a new route for path with matching handler.
-func (r *Router) Add(path string, h HandlerFunc) {
+func (r *router) add(path string, h HandlerFunc) {
 	// Validate path
 	if path == "" {
 		path = "/"
@@ -83,7 +79,7 @@ func (r *Router) Add(path string, h HandlerFunc) {
 	r.insert(path, h, skind, ppath, pnames)
 }
 
-func (r *Router) insert(path string, h HandlerFunc, t kind, ppath string, pnames []string) {
+func (r *router) insert(path string, h HandlerFunc, t kind, ppath string, pnames []string) {
 	// Adjust max param
 	l := len(pnames)
 	if *r.gig.maxParam < l {
@@ -228,15 +224,9 @@ func (n *node) findChildByKind(t kind) *node {
 	return nil
 }
 
-// Find lookup a handler registered for path. It also parses URL for path
+// find lookup a handler registered for path. It also parses URL for path
 // parameters and load them into context.
-//
-// For performance:
-//
-// - Get context from `Gig#AcquireContext()`
-// - Reset it `Context#Reset()`
-// - Return it `Gig#ReleaseContext()`.
-func (r *Router) Find(path string, c Context) {
+func (r *router) find(path string, c Context) {
 	ctx := c.(*context)
 	ctx.path = path
 	cn := r.tree // Current node as root

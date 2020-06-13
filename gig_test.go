@@ -18,10 +18,10 @@ func TestGig(t *testing.T) {
 	c := newContext("/").(*context)
 
 	// Router
-	is.True(g.Router() != nil)
+	is.True(g.router != nil)
 
 	// DefaultGeminiErrorHandler
-	g.DefaultGeminiErrorHandler(errors.New("error"), c)
+	DefaultGeminiErrorHandler(errors.New("error"), c)
 	is.Equal("50 error\r\n", c.conn.(*fakeConn).Written)
 }
 
@@ -219,12 +219,12 @@ func TestGigEncodedPath(t *testing.T) {
 
 	g := New()
 	g.Handle("/:id", func(c Context) error {
-		return c.NoContentSuccess()
+		return c.NoContent(StatusInput, "please enter name")
 	})
 
 	c := newContext("/with%2Fslash")
 	g.ServeGemini(c)
-	is.Equal("20 text/gemini\r\n", c.(*context).conn.(*fakeConn).Written)
+	is.Equal("10 please enter name\r\n", c.(*context).conn.(*fakeConn).Written)
 }
 
 func TestGigGroup(t *testing.T) {
@@ -241,7 +241,7 @@ func TestGigGroup(t *testing.T) {
 	}))
 
 	h := func(c Context) error {
-		return c.NoContentSuccess()
+		return c.NoContent(StatusInput, "please enter name")
 	}
 
 	//--------
@@ -299,21 +299,11 @@ func TestGigNotFound(t *testing.T) {
 	is.Equal("51 Not Found\r\n", c.conn.(*fakeConn).Written)
 }
 
-func TestGigContext(t *testing.T) {
-	is := is.New(t)
-
-	g := New()
-	c := g.AcquireContext()
-	_, ok := c.(*context)
-	is.True(ok)
-	g.ReleaseContext(c)
-}
-
 func TestGigRun(t *testing.T) {
 	g := New()
 
 	go func() {
-		_ = g.Run(":0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
+		_ = g.Run("127.0.0.1:0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
 	}()
 	time.Sleep(200 * time.Millisecond)
 
@@ -392,7 +382,7 @@ func TestGigRunByteString(t *testing.T) {
 			g.HideBanner = true
 
 			go func() {
-				err := g.Run(":0", test.cert, test.key)
+				err := g.Run("127.0.0.1:0", test.cert, test.key)
 				if test.expectedErr != nil {
 					is.Equal(err.Error(), test.expectedErr.Error())
 				} else if err != ErrServerClosed { // Prevent the test to fail after closing the servers
@@ -437,7 +427,7 @@ func TestGigClose(t *testing.T) {
 	errCh := make(chan error)
 
 	go func() {
-		errCh <- g.Run(":0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
+		errCh <- g.Run("127.0.0.1:0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
 	}()
 
 	time.Sleep(200 * time.Millisecond)

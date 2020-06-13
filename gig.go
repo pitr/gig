@@ -51,37 +51,47 @@ type (
 	// Gig is the top-level framework instance.
 	Gig struct {
 		common
-		premiddleware      []MiddlewareFunc
-		middleware         []MiddlewareFunc
-		maxParam           *int
-		router             *Router
-		pool               sync.Pool
-		ReadTimeout        time.Duration
-		WriteTimeout       time.Duration
-		TLSConfig          *tls.Config
-		Addr               string
-		Listener           net.Listener
-		doneChan           chan struct{}
-		closeOnce          sync.Once
-		mu                 sync.Mutex
-		HideBanner         bool
-		HidePort           bool
+
+		premiddleware []MiddlewareFunc
+		middleware    []MiddlewareFunc
+		maxParam      *int
+		router        *router
+		listener      net.Listener
+		addr          string
+		pool          sync.Pool
+		doneChan      chan struct{}
+		closeOnce     sync.Once
+		mu            sync.Mutex
+
+		// HideBanner disables banner on startup.
+		HideBanner bool
+		// HidePort disables startup message.
+		HidePort bool
+		// GeminiErrorHandler allows setting custom error handler
 		GeminiErrorHandler GeminiErrorHandler
-		Validator          Validator
-		Renderer           Renderer
+		// Renderer must be set for Context#Render to work
+		Renderer Renderer
+		// ReadTimeout set max read timeout on socket.
+		// Default is none.
+		ReadTimeout time.Duration
+		// WriteTimeout set max write timeout on socket.
+		// Default is none.
+		WriteTimeout time.Duration
+		// TLSConfig is passed to tls.NewListener and needs to be modified
+		// before Run is called.
+		TLSConfig *tls.Config
 	}
 
 	// Route contains a handler and information for matching against requests.
 	Route struct {
-		Path string `json:"path"`
-		Name string `json:"name"`
+		Path string
+		Name string
 	}
 
 	// GeminiError represents an error that occurred while handling a request.
 	GeminiError struct {
-		Code     Status
-		Message  string
-		Internal error
+		Code    Status
+		Message string
 	}
 
 	// MiddlewareFunc defines a function to process middleware.
@@ -93,18 +103,12 @@ type (
 	// GeminiErrorHandler is a centralized error handler.
 	GeminiErrorHandler func(error, Context)
 
-	// Validator is the interface that wraps the Validate function.
-	Validator interface {
-		Validate(i interface{}) error
-	}
-
 	// Renderer is the interface that wraps the Render function.
 	Renderer interface {
 		Render(io.Writer, string, interface{}, Context) error
 	}
 
-	// Map defines a generic map of type `map[string]interface{}`.
-	Map map[string]interface{}
+	storeMap map[string]interface{}
 
 	// Common struct for Gig & Group.
 	common struct{}
@@ -142,7 +146,7 @@ const (
 `
 )
 
-// Errors.
+// Errors that can be inherited from using NewErrorFrom.
 var (
 	ErrTemporaryFailure              = NewError(StatusTemporaryFailure, "Temporary Failure")
 	ErrServerUnavailable             = NewError(StatusServerUnavailable, "Server Unavailable")
@@ -175,48 +179,9 @@ var (
 	}
 )
 
-// New creates an instance of Gig.
-func New() (g *Gig) {
-	g = &Gig{
-		TLSConfig: &tls.Config{
-			MinVersion: tls.VersionTLS12,
-			ClientAuth: tls.RequestClientCert,
-		},
-		maxParam: new(int),
-		doneChan: make(chan struct{}),
-	}
-	g.GeminiErrorHandler = g.DefaultGeminiErrorHandler
-	g.pool.New = func() interface{} {
-		return g.NewContext(nil, nil, "", nil)
-	}
-	g.router = NewRouter(g)
-
-	return
-}
-
-// NewContext returns a Context instance.
-func (g *Gig) NewContext(c net.Conn, u *url.URL, requestURI string, tls *tls.ConnectionState) Context {
-	return &context{
-		conn:       c,
-		TLS:        tls,
-		u:          u,
-		requestURI: requestURI,
-		response:   NewResponse(c),
-		store:      make(Map),
-		gig:        g,
-		pvalues:    make([]string, *g.maxParam),
-		handler:    NotFoundHandler,
-	}
-}
-
-// Router returns the default router.
-func (g *Gig) Router() *Router {
-	return g.router
-}
-
 // DefaultGeminiErrorHandler is the default HTTP error handler. It sends a JSON response
 // with status code.
-func (g *Gig) DefaultGeminiErrorHandler(err error, c Context) {
+func DefaultGeminiErrorHandler(err error, c Context) {
 	he, ok := err.(*GeminiError)
 	if !ok {
 		he = &GeminiError{
@@ -236,6 +201,40 @@ func (g *Gig) DefaultGeminiErrorHandler(err error, c Context) {
 		if err != nil {
 			debugPrintf("%s", err)
 		}
+	}
+}
+
+// New creates an instance of Gig.
+func New() *Gig {
+	g := &Gig{
+		TLSConfig: &tls.Config{
+			MinVersion: tls.VersionTLS12,
+			ClientAuth: tls.RequestClientCert,
+		},
+		maxParam: new(int),
+		doneChan: make(chan struct{}),
+	}
+	g.GeminiErrorHandler = DefaultGeminiErrorHandler
+	g.pool.New = func() interface{} {
+		return g.NewContext(nil, nil, "", nil)
+	}
+	g.router = newRouter(g)
+
+	return g
+}
+
+// NewContext returns a Context instance. Typically used for testing.
+func (g *Gig) NewContext(c net.Conn, u *url.URL, requestURI string, tls *tls.ConnectionState) Context {
+	return &context{
+		conn:       c,
+		TLS:        tls,
+		u:          u,
+		requestURI: requestURI,
+		response:   NewResponse(c),
+		store:      make(storeMap),
+		gig:        g,
+		pvalues:    make([]string, *g.maxParam),
+		handler:    NotFoundHandler,
 	}
 }
 
@@ -299,7 +298,7 @@ func (g *Gig) File(path, file string, m ...MiddlewareFunc) *Route {
 func (g *Gig) add(path string, handler HandlerFunc, middleware ...MiddlewareFunc) *Route {
 	name := handlerName(handler)
 
-	g.router.Add(path, func(c Context) error {
+	g.router.add(path, func(c Context) error {
 		h := handler
 		// Chain middleware
 		for i := len(middleware) - 1; i >= 0; i-- {
@@ -370,18 +369,6 @@ func (g *Gig) Routes() []*Route {
 	return routes
 }
 
-// AcquireContext returns an empty `Context` instance from the pool.
-// You must return the context by calling `ReleaseContext()`.
-func (g *Gig) AcquireContext() Context {
-	return g.pool.Get().(Context)
-}
-
-// ReleaseContext returns the `Context` instance back to the pool.
-// You must call it after `AcquireContext()`.
-func (g *Gig) ReleaseContext(c Context) {
-	g.pool.Put(c)
-}
-
 // ServeGemini serves Gemini request.
 func (g *Gig) ServeGemini(c Context) {
 	var h HandlerFunc
@@ -389,12 +376,12 @@ func (g *Gig) ServeGemini(c Context) {
 	URL := c.URL()
 
 	if g.premiddleware == nil {
-		g.router.Find(GetPath(URL), c)
+		g.router.find(getPath(URL), c)
 		h = c.Handler()
 		h = applyMiddleware(h, g.middleware...)
 	} else {
 		h = func(c Context) error {
-			g.router.Find(GetPath(URL), c)
+			g.router.find(getPath(URL), c)
 			h := c.Handler()
 			h = applyMiddleware(h, g.middleware...)
 			return h(c)
@@ -443,7 +430,7 @@ func filepathOrContent(fileOrContent interface{}) (content []byte, err error) {
 }
 
 func (g *Gig) startTLS(address string) error {
-	g.Addr = address
+	g.addr = address
 
 	// Setup
 	if !g.HideBanner {
@@ -451,20 +438,20 @@ func (g *Gig) startTLS(address string) error {
 	}
 
 	g.mu.Lock()
-	if g.Listener == nil {
-		l, err := newListener(g.Addr)
+	if g.listener == nil {
+		l, err := newListener(g.addr)
 		if err != nil {
 			return err
 		}
 
-		g.Listener = tls.NewListener(l, g.TLSConfig)
+		g.listener = tls.NewListener(l, g.TLSConfig)
 	}
 	g.mu.Unlock()
 
-	defer g.Listener.Close()
+	defer g.listener.Close()
 
 	if !g.HidePort {
-		debugPrintf("⇨ gemini server started on %s\n", g.Listener.Addr())
+		debugPrintf("⇨ gemini server started on %s\n", g.listener.Addr())
 	}
 
 	return g.serve()
@@ -474,7 +461,7 @@ func (g *Gig) serve() error {
 	var tempDelay time.Duration // how long to sleep on accept failure
 
 	for {
-		conn, err := g.Listener.Accept()
+		conn, err := g.listener.Accept()
 		if err != nil {
 			select {
 			case <-g.doneChan:
@@ -574,7 +561,7 @@ func (g *Gig) handleRequest(conn *tls.Conn) {
 
 	// Acquire context
 	c := g.pool.Get().(*context)
-	c.Reset(conn, URL, RequestURI, tlsState)
+	c.reset(conn, URL, RequestURI, tlsState)
 
 	g.ServeGemini(c)
 
@@ -591,8 +578,8 @@ func (g *Gig) Close() error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	if g.Listener != nil {
-		return g.Listener.Close()
+	if g.listener != nil {
+		return g.listener.Close()
 	}
 
 	return nil
@@ -613,8 +600,8 @@ func (ge *GeminiError) Error() string {
 	return fmt.Sprintf("error=%s", ge.Message)
 }
 
-// GetPath returns RawPath, if it's empty returns Path from URL.
-func GetPath(u *url.URL) string {
+// getPath returns RawPath, if it's empty returns Path from URL.
+func getPath(u *url.URL) string {
 	path := u.RawPath
 	if path == "" {
 		path = u.Path

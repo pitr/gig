@@ -36,18 +36,15 @@ type (
 		// Path returns the registered path for the handler.
 		Path() string
 
+		// QueryString returns the URL query string.
+		QueryString() string
+
 		// RequestURI is the unmodified URL string as sent by the client
 		// to a server. Usually the URL() or Path() should be used instead.
 		RequestURI() string
 
-		// SetPath sets the registered path for the handler.
-		SetPath(p string)
-
 		// Param returns path parameter by name.
 		Param(name string) string
-
-		// QueryString returns the URL query string.
-		QueryString() string
 
 		// Get retrieves data from the context.
 		Get(key string) interface{}
@@ -65,7 +62,7 @@ type (
 		// GeminiBlob sends a text/gemini blob response with status code.
 		GeminiBlob(code Status, b []byte) error
 
-		// String sends a string response with status code.
+		// Text sends a text/plain response with status code.
 		Text(code Status, s string) error
 
 		// Blob sends a blob response with status code and content type.
@@ -80,9 +77,6 @@ type (
 		// NoContent sends a response with no body, and a status code and meta field.
 		NoContent(code Status, meta string) error
 
-		// NoContentSuccess sends a StatutSuccess response with no body.
-		NoContentSuccess() error
-
 		// Redirect redirects the request to a provided URL with status code.
 		Redirect(code Status, url string) error
 
@@ -92,16 +86,8 @@ type (
 		// Handler returns the matched handler by router.
 		Handler() HandlerFunc
 
-		// SetHandler sets the matched handler by router.
-		SetHandler(h HandlerFunc)
-
 		// Gig returns the `Gig` instance.
 		Gig() *Gig
-
-		// Reset resets the context after request completes. It must be called along
-		// with `Gig#AcquireContext()` and `Gig#ReleaseContext()`.
-		// See `Gig#ServeGemini()`
-		Reset(c net.Conn, u *url.URL, requestURI string, tls *tls.ConnectionState)
 	}
 
 	context struct {
@@ -114,7 +100,7 @@ type (
 		pnames     []string
 		pvalues    []string
 		handler    HandlerFunc
-		store      Map
+		store      storeMap
 		gig        *Gig
 		lock       sync.RWMutex
 	}
@@ -153,10 +139,6 @@ func (c *context) RequestURI() string {
 	return c.requestURI
 }
 
-func (c *context) SetPath(p string) {
-	c.path = p
-}
-
 func (c *context) Param(name string) string {
 	for i, n := range c.pnames {
 		if i < len(c.pvalues) {
@@ -185,7 +167,7 @@ func (c *context) Set(key string, val interface{}) {
 	defer c.lock.Unlock()
 
 	if c.store == nil {
-		c.store = make(Map)
+		c.store = make(storeMap)
 	}
 
 	c.store[key] = val
@@ -327,10 +309,6 @@ func (c *context) NoContent(code Status, meta string) error {
 	return c.response.WriteHeader(code, meta)
 }
 
-func (c *context) NoContentSuccess() error {
-	return c.response.WriteHeader(StatusSuccess, "text/gemini")
-}
-
 func (c *context) Redirect(code Status, url string) error {
 	if code < 30 || code >= 40 {
 		return ErrInvalidRedirectCode
@@ -351,11 +329,7 @@ func (c *context) Handler() HandlerFunc {
 	return c.handler
 }
 
-func (c *context) SetHandler(h HandlerFunc) {
-	c.handler = h
-}
-
-func (c *context) Reset(conn net.Conn, u *url.URL, requestURI string, tls *tls.ConnectionState) {
+func (c *context) reset(conn net.Conn, u *url.URL, requestURI string, tls *tls.ConnectionState) {
 	c.conn = conn
 	c.TLS = tls
 	c.u = u

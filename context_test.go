@@ -88,12 +88,6 @@ func TestContext(t *testing.T) {
 	c.conn.(*fakeConn).failAfter = 1
 	is.True(c.Stream(StatusSuccess, "application/octet-stream", r) != nil)
 
-	// NoContentSuccess
-	c = newContext("/").(*context)
-
-	_ = c.NoContentSuccess()
-	is.Equal(fmt.Sprintf("%d text/gemini\r\n", StatusSuccess), c.conn.(*fakeConn).Written)
-
 	// Error
 	c = newContext("/").(*context)
 
@@ -102,26 +96,26 @@ func TestContext(t *testing.T) {
 
 	// Reset
 	c.Set("foe", "ban")
-	c.Reset(nil, nil, "", nil)
+	c.reset(nil, nil, "", nil)
 	is.Equal(0, len(c.store))
 	is.Equal("", c.Path())
 }
 
 func TestContextPath(t *testing.T) {
 	g := New()
-	r := g.Router()
+	r := g.router
 
-	r.Add("/users/:id", nil)
+	r.add("/users/:id", nil)
 	c := g.NewContext(nil, nil, "", nil)
-	r.Find("/users/1", c)
+	r.find("/users/1", c)
 
 	is := is.New(t)
 
 	is.Equal("/users/:id", c.Path())
 
-	r.Add("/users/:uid/files/:fid", nil)
+	r.add("/users/:uid/files/:fid", nil)
 	c = g.NewContext(nil, nil, "", nil)
-	r.Find("/users/1/files/1", c)
+	r.find("/users/1/files/1", c)
 	is.Equal("/users/:uid/files/:fid", c.Path())
 }
 
@@ -139,15 +133,15 @@ func TestContextGetParam(t *testing.T) {
 	g := New()
 	c := newContext("/bar")
 	is := is.New(t)
-	r := g.Router()
+	r := g.router
 
-	r.Add("/:foo", func(Context) error { return nil })
+	r.add("/:foo", func(Context) error { return nil })
 
 	// round-trip param values with modification
 	is.Equal("", c.Param("bar"))
 
 	// shouldn't explode during Reset() afterwards!
-	c.Reset(nil, nil, "", nil)
+	c.(*context).reset(nil, nil, "", nil)
 }
 
 func TestContextRedirect(t *testing.T) {
@@ -187,33 +181,21 @@ func BenchmarkContext_Store(b *testing.B) {
 
 func TestContextHandler(t *testing.T) {
 	g := New()
-	r := g.Router()
+	r := g.router
 	b := new(bytes.Buffer)
 
-	r.Add("/handler", func(Context) error {
+	r.add("/handler", func(Context) error {
 		_, err := b.Write([]byte("handler"))
 		return err
 	})
 
 	c := g.NewContext(nil, nil, "", nil)
-	r.Find("/handler", c)
+	r.find("/handler", c)
 	err := c.Handler()(c)
 
 	is := is.New(t)
 	is.Equal("handler", b.String())
 	is.NoErr(err)
-}
-
-func TestContext_SetHandler(t *testing.T) {
-	c := new(context)
-	is := is.New(t)
-
-	is.Equal(c.Handler(), nil)
-
-	c.SetHandler(func(c Context) error {
-		return nil
-	})
-	is.True(c.Handler() != nil)
 }
 
 func TestContext_Path(t *testing.T) {
@@ -222,7 +204,7 @@ func TestContext_Path(t *testing.T) {
 	c := new(context)
 	is := is.New(t)
 
-	c.SetPath(path)
+	c.path = path
 	is.Equal(path, c.Path())
 }
 

@@ -26,7 +26,7 @@ func (g *Group) Use(middleware ...MiddlewareFunc) {
 
 // Handle implements `Gig#Handle()` for sub-routes within the Group.
 func (g *Group) Handle(path string, h HandlerFunc, m ...MiddlewareFunc) *Route {
-	return g.Add(path, h, m...)
+	return g.add(path, h, m...)
 }
 
 // Group creates a new sub-group with prefix and optional sub-group-level middleware.
@@ -48,8 +48,7 @@ func (g *Group) File(path, file string) {
 	g.file(path, file, g.Handle)
 }
 
-// Add implements `Gig#Add()` for sub-routes within the Group.
-func (g *Group) Add(path string, handler HandlerFunc, middleware ...MiddlewareFunc) *Route {
+func (g *Group) add(path string, handler HandlerFunc, middleware ...MiddlewareFunc) *Route {
 	// Combine into a new slice to avoid accidentally passing the same slice for
 	// multiple routes, which would lead to later add() calls overwriting the
 	// middleware from earlier calls.

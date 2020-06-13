@@ -514,13 +514,13 @@ func TestRouterEmpty(t *testing.T) {
 	g := New()
 	r := g.router
 	path := ""
-	r.Add(path, func(c Context) error {
+	r.add(path, func(c Context) error {
 		c.Set("path", path)
 		return nil
 	})
 
 	c := g.NewContext(nil, nil, "", nil).(*context)
-	r.Find(path, c)
+	r.find(path, c)
 
 	is.NoErr(c.handler(c))
 	is.Equal(path, c.Get("path"))
@@ -530,13 +530,13 @@ func TestRouterStatic(t *testing.T) {
 	g := New()
 	r := g.router
 	path := "/folders/a/files/gig.gif"
-	r.Add(path, func(c Context) error {
+	r.add(path, func(c Context) error {
 		c.Set("path", path)
 		return nil
 	})
 
 	c := g.NewContext(nil, nil, "", nil).(*context)
-	r.Find(path, c)
+	r.find(path, c)
 
 	is := is.New(t)
 	is.NoErr(c.handler(c))
@@ -546,12 +546,12 @@ func TestRouterStatic(t *testing.T) {
 func TestRouterParam(t *testing.T) {
 	g := New()
 	r := g.router
-	r.Add("/users/:id", func(c Context) error {
+	r.add("/users/:id", func(c Context) error {
 		return nil
 	})
 
 	c := g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/users/1", c)
+	r.find("/users/1", c)
 
 	is := is.New(t)
 	is.Equal("1", c.Param("id"))
@@ -560,13 +560,13 @@ func TestRouterParam(t *testing.T) {
 func TestRouterTwoParam(t *testing.T) {
 	g := New()
 	r := g.router
-	r.Add("/users/:uid/files/:fid", func(Context) error {
+	r.add("/users/:uid/files/:fid", func(Context) error {
 		return nil
 	})
 
 	c := g.NewContext(nil, nil, "", nil).(*context)
 
-	r.Find("/users/1/files/1", c)
+	r.find("/users/1/files/1", c)
 
 	is := is.New(t)
 	is.Equal("1", c.Param("uid"))
@@ -577,18 +577,18 @@ func TestRouterParamWithSlash(t *testing.T) {
 	g := New()
 	r := g.router
 
-	r.Add("/a/:b/c/d/:g", func(c Context) error {
+	r.add("/a/:b/c/d/:g", func(c Context) error {
 		return nil
 	})
 
-	r.Add("/a/:b/c/:d/:f", func(c Context) error {
+	r.add("/a/:b/c/:d/:f", func(c Context) error {
 		return nil
 	})
 
 	c := g.NewContext(nil, nil, "", nil).(*context)
 
 	// No Panic
-	r.Find("/a/1/c/d/2/3", c)
+	r.find("/a/1/c/d/2/3", c)
 }
 
 func TestRouterParamStaticConflict(t *testing.T) {
@@ -607,14 +607,14 @@ func TestRouterParamStaticConflict(t *testing.T) {
 	is := is.New(t)
 
 	c := g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/g/s", c)
+	r.find("/g/s", c)
 
 	is.NoErr(c.handler(c))
 	is.Equal("s", c.Param("name"))
 	is.Equal("/g/:name", c.Get("path"))
 
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/g/status", c)
+	r.find("/g/status", c)
 	is.NoErr(c.handler(c))
 	is.Equal("/g/status", c.Get("path"))
 }
@@ -624,13 +624,13 @@ func TestRouterMatchAny(t *testing.T) {
 	r := g.router
 
 	// Routes
-	r.Add("/", func(Context) error {
+	r.add("/", func(Context) error {
 		return nil
 	})
-	r.Add("/*", func(Context) error {
+	r.add("/*", func(Context) error {
 		return nil
 	})
-	r.Add("/users/*", func(Context) error {
+	r.add("/users/*", func(Context) error {
 		return nil
 	})
 
@@ -638,13 +638,13 @@ func TestRouterMatchAny(t *testing.T) {
 
 	is := is.New(t)
 
-	r.Find("/", c)
+	r.find("/", c)
 	is.Equal("", c.Param("*"))
 
-	r.Find("/download", c)
+	r.find("/download", c)
 	is.Equal("download", c.Param("*"))
 
-	r.Find("/users/joe", c)
+	r.find("/users/joe", c)
 	is.Equal("joe", c.Param("*"))
 }
 
@@ -662,45 +662,45 @@ func TestRouterMatchAnySlash(t *testing.T) {
 	}
 
 	// Routes
-	r.Add("/users", handler)
-	r.Add("/users/*", handler)
-	r.Add("/img/*", handler)
-	r.Add("/img/load", handler)
-	r.Add("/img/load/*", handler)
-	r.Add("/assets/*", handler)
+	r.add("/users", handler)
+	r.add("/users/*", handler)
+	r.add("/img/*", handler)
+	r.add("/img/load", handler)
+	r.add("/img/load/*", handler)
+	r.add("/assets/*", handler)
 
 	c := g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/", c)
+	r.find("/", c)
 	is.Equal("", c.Param("*"))
 
 	// Test trailing slash request for simple any route (see #1526)
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/users/", c)
+	r.find("/users/", c)
 	is.NoErr(c.handler(c))
 	is.Equal("/users/*", c.Get("path"))
 	is.Equal("", c.Param("*"))
 
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/users/joe", c)
+	r.find("/users/joe", c)
 	is.NoErr(c.handler(c))
 	is.Equal("/users/*", c.Get("path"))
 	is.Equal("joe", c.Param("*"))
 
 	// Test trailing slash request for nested any route (see #1526)
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/img/load", c)
+	r.find("/img/load", c)
 	is.NoErr(c.handler(c))
 	is.Equal("/img/load", c.Get("path"))
 	is.Equal("", c.Param("*"))
 
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/img/load/", c)
+	r.find("/img/load/", c)
 	is.NoErr(c.handler(c))
 	is.Equal("/img/load/*", c.Get("path"))
 	is.Equal("", c.Param("*"))
 
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/img/load/ben", c)
+	r.find("/img/load/ben", c)
 	is.NoErr(c.handler(c))
 	is.Equal("/img/load/*", c.Get("path"))
 	is.Equal("ben", c.Param("*"))
@@ -708,14 +708,14 @@ func TestRouterMatchAnySlash(t *testing.T) {
 	// Test /assets/* any route
 	// ... without trailing slash must not match
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/assets", c)
+	r.find("/assets", c)
 	is.True(c.handler(c) != nil)
 	is.Equal(nil, c.Get("path"))
 	is.Equal("", c.Param("*"))
 
 	// ... with trailing slash must match
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/assets/", c)
+	r.find("/assets/", c)
 	is.NoErr(c.handler(c))
 	is.Equal("/assets/*", c.Get("path"))
 	is.Equal("", c.Param("*"))
@@ -732,40 +732,40 @@ func TestRouterMatchAnyMultiLevel(t *testing.T) {
 	}
 
 	// Routes
-	r.Add("/api/users/jack", handler)
-	r.Add("/api/users/jill", handler)
-	r.Add("/api/users/*", handler)
-	r.Add("/api/*", handler)
-	r.Add("/other/*", handler)
-	r.Add("/*", handler)
+	r.add("/api/users/jack", handler)
+	r.add("/api/users/jill", handler)
+	r.add("/api/users/*", handler)
+	r.add("/api/*", handler)
+	r.add("/other/*", handler)
+	r.add("/*", handler)
 
 	c := g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/api/users/jack", c)
+	r.find("/api/users/jack", c)
 	is.NoErr(c.handler(c))
 	is.Equal("/api/users/jack", c.Get("path"))
 	is.Equal("", c.Param("*"))
 
-	r.Find("/api/users/jill", c)
+	r.find("/api/users/jill", c)
 	is.NoErr(c.handler(c))
 	is.Equal("/api/users/jill", c.Get("path"))
 	is.Equal("", c.Param("*"))
 
-	r.Find("/api/users/joe", c)
+	r.find("/api/users/joe", c)
 	is.NoErr(c.handler(c))
 	is.Equal("/api/users/*", c.Get("path"))
 	is.Equal("joe", c.Param("*"))
 
-	r.Find("/api/nousers/joe", c)
+	r.find("/api/nousers/joe", c)
 	is.NoErr(c.handler(c))
 	is.Equal("/api/*", c.Get("path"))
 	is.Equal("nousers/joe", c.Param("*"))
 
-	r.Find("/api/none", c)
+	r.find("/api/none", c)
 	is.NoErr(c.handler(c))
 	is.Equal("/api/*", c.Get("path"))
 	is.Equal("none", c.Param("*"))
 
-	r.Find("/noapi/users/jim", c)
+	r.find("/noapi/users/jim", c)
 	is.NoErr(c.handler(c))
 	is.Equal("/*", c.Get("path"))
 	is.Equal("noapi/users/jim", c.Param("*"))
@@ -788,35 +788,35 @@ func TestRouterMatchAnyMultiLevelWithPost(t *testing.T) {
 
 	// /api/auth/login shall choose login
 	c := g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/api/auth/login", c)
+	r.find("/api/auth/login", c)
 	is.NoErr(c.handler(c))
 	is.Equal("/api/auth/login", c.Get("path"))
 	is.Equal("", c.Param("*"))
 
 	// /api/auth/login shall choose any route
 	// c = g.NewContext(nil, nil,nil).(*context)
-	// r.Find( "/api/auth/login", c)
+	// r.find( "/api/auth/login", c)
 	// c.handler(c)
 	// is.Equal("/api/*", c.Get("path"))
 	// is.Equal("auth/login", c.Param("*"))
 
 	// /api/auth/logout shall choose nearest any route
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/api/auth/logout", c)
+	r.find("/api/auth/logout", c)
 	is.NoErr(c.handler(c))
 	is.Equal("/api/*", c.Get("path"))
 	is.Equal("auth/logout", c.Param("*"))
 
 	// /api/other/test shall choose nearest any route
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/api/other/test", c)
+	r.find("/api/other/test", c)
 	is.NoErr(c.handler(c))
 	is.Equal("/api/*", c.Get("path"))
 	is.Equal("other/test", c.Param("*"))
 
 	// /api/other/test shall choose nearest any route
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/api/other/test", c)
+	r.find("/api/other/test", c)
 	is.NoErr(c.handler(c))
 	is.Equal("/api/*", c.Get("path"))
 	is.Equal("other/test", c.Param("*"))
@@ -827,12 +827,12 @@ func TestRouterMicroParam(t *testing.T) {
 
 	g := New()
 	r := g.router
-	r.Add("/:a/:b/:c", func(c Context) error {
+	r.add("/:a/:b/:c", func(c Context) error {
 		return nil
 	})
 
 	c := g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/1/2/3", c)
+	r.find("/1/2/3", c)
 	is.Equal("1", c.Param("a"))
 	is.Equal("2", c.Param("b"))
 	is.Equal("3", c.Param("c"))
@@ -845,13 +845,13 @@ func TestRouterMixParamMatchAny(t *testing.T) {
 	r := g.router
 
 	// Route
-	r.Add("/users/:id/*", func(c Context) error {
+	r.add("/users/:id/*", func(c Context) error {
 		return nil
 	})
 
 	c := g.NewContext(nil, nil, "", nil).(*context)
 
-	r.Find("/users/joe/comments", c)
+	r.find("/users/joe/comments", c)
 	is.NoErr(c.handler(c))
 	is.Equal("joe", c.Param("id"))
 }
@@ -863,28 +863,28 @@ func TestRouterMultiRoute(t *testing.T) {
 	r := g.router
 
 	// Routes
-	r.Add("/users", func(c Context) error {
+	r.add("/users", func(c Context) error {
 		c.Set("path", "/users")
 		return nil
 	})
-	r.Add("/users/:id", func(c Context) error {
+	r.add("/users/:id", func(c Context) error {
 		return nil
 	})
 
 	c := g.NewContext(nil, nil, "", nil).(*context)
 
 	// Route > /users
-	r.Find("/users", c)
+	r.find("/users", c)
 	is.NoErr(c.handler(c))
 	is.Equal("/users", c.Get("path"))
 
 	// Route > /users/:id
-	r.Find("/users/1", c)
+	r.find("/users/1", c)
 	is.Equal("1", c.Param("id"))
 
 	// Route > /user
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/user", c)
+	r.find("/user", c)
 	he := c.handler(c).(*GeminiError)
 	is.Equal(StatusNotFound, he.Code)
 }
@@ -896,78 +896,78 @@ func TestRouterPriority(t *testing.T) {
 	r := g.router
 
 	// Routes
-	r.Add("/users", handlerHelper("a", 1))
-	r.Add("/users/new", handlerHelper("b", 2))
-	r.Add("/users/:id", handlerHelper("c", 3))
-	r.Add("/users/dew", handlerHelper("d", 4))
-	r.Add("/users/:id/files", handlerHelper("g", 5))
-	r.Add("/users/newsee", handlerHelper("f", 6))
-	r.Add("/users/*", handlerHelper("g", 7))
-	r.Add("/users/new/*", handlerHelper("h", 8))
-	r.Add("/*", handlerHelper("i", 9))
+	r.add("/users", handlerHelper("a", 1))
+	r.add("/users/new", handlerHelper("b", 2))
+	r.add("/users/:id", handlerHelper("c", 3))
+	r.add("/users/dew", handlerHelper("d", 4))
+	r.add("/users/:id/files", handlerHelper("g", 5))
+	r.add("/users/newsee", handlerHelper("f", 6))
+	r.add("/users/*", handlerHelper("g", 7))
+	r.add("/users/new/*", handlerHelper("h", 8))
+	r.add("/*", handlerHelper("i", 9))
 
 	// Route > /users
 	c := g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/users", c)
+	r.find("/users", c)
 	is.NoErr(c.handler(c))
 	is.Equal(1, c.Get("a"))
 	is.Equal("/users", c.Get("path"))
 
 	// Route > /users/new
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/users/new", c)
+	r.find("/users/new", c)
 	is.NoErr(c.handler(c))
 	is.Equal(2, c.Get("b"))
 	is.Equal("/users/new", c.Get("path"))
 
 	// Route > /users/:id
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/users/1", c)
+	r.find("/users/1", c)
 	is.NoErr(c.handler(c))
 	is.Equal(3, c.Get("c"))
 	is.Equal("/users/:id", c.Get("path"))
 
 	// Route > /users/dew
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/users/dew", c)
+	r.find("/users/dew", c)
 	is.NoErr(c.handler(c))
 	is.Equal(4, c.Get("d"))
 	is.Equal("/users/dew", c.Get("path"))
 
 	// Route > /users/:id/files
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/users/1/files", c)
+	r.find("/users/1/files", c)
 	is.NoErr(c.handler(c))
 	is.Equal(5, c.Get("g"))
 	is.Equal("/users/:id/files", c.Get("path"))
 
 	// Route > /users/:id
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/users/news", c)
+	r.find("/users/news", c)
 	is.NoErr(c.handler(c))
 	is.Equal(3, c.Get("c"))
 	is.Equal("/users/:id", c.Get("path"))
 
 	// Route > /users/newsee
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/users/newsee", c)
+	r.find("/users/newsee", c)
 	is.NoErr(c.handler(c))
 	is.Equal(6, c.Get("f"))
 	is.Equal("/users/newsee", c.Get("path"))
 
 	// Route > /users/newsee
-	r.Find("/users/newsee", c)
+	r.find("/users/newsee", c)
 	is.NoErr(c.handler(c))
 	is.Equal(6, c.Get("f"))
 
 	// Route > /users/newsee
-	r.Find("/users/newsee", c)
+	r.find("/users/newsee", c)
 	is.NoErr(c.handler(c))
 	is.Equal(6, c.Get("f"))
 
 	// Route > /users/*
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/users/joe/books", c)
+	r.find("/users/joe/books", c)
 	is.NoErr(c.handler(c))
 	is.Equal(7, c.Get("g"))
 	is.Equal("/users/*", c.Get("path"))
@@ -975,7 +975,7 @@ func TestRouterPriority(t *testing.T) {
 
 	// Route > /users/new/* should be matched
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/users/new/someone", c)
+	r.find("/users/new/someone", c)
 	is.NoErr(c.handler(c))
 	is.Equal(8, c.Get("h"))
 	is.Equal("/users/new/*", c.Get("path"))
@@ -983,7 +983,7 @@ func TestRouterPriority(t *testing.T) {
 
 	// Route > /users/* should be matched although /users/dew exists
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/users/dew/someone", c)
+	r.find("/users/dew/someone", c)
 	is.NoErr(c.handler(c))
 	is.Equal(7, c.Get("g"))
 	is.Equal("/users/*", c.Get("path"))
@@ -992,7 +992,7 @@ func TestRouterPriority(t *testing.T) {
 
 	// Route > /users/* should be matched although /users/dew exists
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/users/notexists/someone", c)
+	r.find("/users/notexists/someone", c)
 	is.NoErr(c.handler(c))
 	is.Equal(7, c.Get("g"))
 	is.Equal("/users/*", c.Get("path"))
@@ -1000,7 +1000,7 @@ func TestRouterPriority(t *testing.T) {
 
 	// Route > *
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/nousers", c)
+	r.find("/nousers", c)
 	is.NoErr(c.handler(c))
 	is.Equal(9, c.Get("i"))
 	is.Equal("/*", c.Get("path"))
@@ -1008,7 +1008,7 @@ func TestRouterPriority(t *testing.T) {
 
 	// Route > *
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/nousers/new", c)
+	r.find("/nousers/new", c)
 	is.NoErr(c.handler(c))
 	is.Equal(9, c.Get("i"))
 	is.Equal("/*", c.Get("path"))
@@ -1019,10 +1019,10 @@ func TestRouterIssue1348(t *testing.T) {
 	g := New()
 	r := g.router
 
-	r.Add("/:lang/", func(c Context) error {
+	r.add("/:lang/", func(c Context) error {
 		return nil
 	})
-	r.Add("/:lang/dupa", func(c Context) error {
+	r.add("/:lang/dupa", func(c Context) error {
 		return nil
 	})
 }
@@ -1035,26 +1035,26 @@ func TestRouterPriorityNotFound(t *testing.T) {
 	c := g.NewContext(nil, nil, "", nil).(*context)
 
 	// Add
-	r.Add("/a/foo", func(c Context) error {
+	r.add("/a/foo", func(c Context) error {
 		c.Set("a", 1)
 		return nil
 	})
-	r.Add("/a/bar", func(c Context) error {
+	r.add("/a/bar", func(c Context) error {
 		c.Set("b", 2)
 		return nil
 	})
 
 	// Find
-	r.Find("/a/foo", c)
+	r.find("/a/foo", c)
 	is.NoErr(c.handler(c))
 	is.Equal(1, c.Get("a"))
 
-	r.Find("/a/bar", c)
+	r.find("/a/bar", c)
 	is.NoErr(c.handler(c))
 	is.Equal(2, c.Get("b"))
 
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/abc/def", c)
+	r.find("/abc/def", c)
 	he := c.handler(c).(*GeminiError)
 	is.Equal(StatusNotFound, he.Code)
 }
@@ -1066,31 +1066,31 @@ func TestRouterParamNames(t *testing.T) {
 	r := g.router
 
 	// Routes
-	r.Add("/users", func(c Context) error {
+	r.add("/users", func(c Context) error {
 		c.Set("path", "/users")
 		return nil
 	})
-	r.Add("/users/:id", func(c Context) error {
+	r.add("/users/:id", func(c Context) error {
 		return nil
 	})
-	r.Add("/users/:uid/files/:fid", func(c Context) error {
+	r.add("/users/:uid/files/:fid", func(c Context) error {
 		return nil
 	})
 
 	c := g.NewContext(nil, nil, "", nil).(*context)
 
 	// Route > /users
-	r.Find("/users", c)
+	r.find("/users", c)
 	is.NoErr(c.handler(c))
 	is.Equal("/users", c.Get("path"))
 
 	// Route > /users/:id
-	r.Find("/users/1", c)
+	r.find("/users/1", c)
 	is.Equal("id", c.pnames[0])
 	is.Equal("1", c.Param("id"))
 
 	// Route > /users/:uid/files/:fid
-	r.Find("/users/1/files/1", c)
+	r.find("/users/1/files/1", c)
 	is.Equal("uid", c.pnames[0])
 	is.Equal("1", c.Param("uid"))
 	is.Equal("fid", c.pnames[1])
@@ -1103,51 +1103,51 @@ func TestRouterStaticDynamicConflict(t *testing.T) {
 	g := New()
 	r := g.router
 
-	r.Add("/dictionary/skills", handlerHelper("a", 1))
-	r.Add("/dictionary/:name", handlerHelper("b", 2))
-	r.Add("/users/new", handlerHelper("d", 4))
-	r.Add("/users/:name", handlerHelper("g", 5))
-	r.Add("/server", handlerHelper("c", 3))
-	r.Add("/", handlerHelper("f", 6))
+	r.add("/dictionary/skills", handlerHelper("a", 1))
+	r.add("/dictionary/:name", handlerHelper("b", 2))
+	r.add("/users/new", handlerHelper("d", 4))
+	r.add("/users/:name", handlerHelper("g", 5))
+	r.add("/server", handlerHelper("c", 3))
+	r.add("/", handlerHelper("f", 6))
 
 	c := g.NewContext(nil, nil, "", nil)
-	r.Find("/dictionary/skills", c)
+	r.find("/dictionary/skills", c)
 	is.NoErr(c.Handler()(c))
 	is.Equal(1, c.Get("a"))
 	is.Equal("/dictionary/skills", c.Get("path"))
 
 	c = g.NewContext(nil, nil, "", nil)
-	r.Find("/dictionary/skillsnot", c)
+	r.find("/dictionary/skillsnot", c)
 	is.NoErr(c.Handler()(c))
 	is.Equal(2, c.Get("b"))
 	is.Equal("/dictionary/:name", c.Get("path"))
 
 	c = g.NewContext(nil, nil, "", nil)
-	r.Find("/dictionary/type", c)
+	r.find("/dictionary/type", c)
 	is.NoErr(c.Handler()(c))
 	is.Equal(2, c.Get("b"))
 	is.Equal("/dictionary/:name", c.Get("path"))
 
 	c = g.NewContext(nil, nil, "", nil)
-	r.Find("/server", c)
+	r.find("/server", c)
 	is.NoErr(c.Handler()(c))
 	is.Equal(3, c.Get("c"))
 	is.Equal("/server", c.Get("path"))
 
 	c = g.NewContext(nil, nil, "", nil)
-	r.Find("/users/new", c)
+	r.find("/users/new", c)
 	is.NoErr(c.Handler()(c))
 	is.Equal(4, c.Get("d"))
 	is.Equal("/users/new", c.Get("path"))
 
 	c = g.NewContext(nil, nil, "", nil)
-	r.Find("/users/new2", c)
+	r.find("/users/new2", c)
 	is.NoErr(c.Handler()(c))
 	is.Equal(5, c.Get("g"))
 	is.Equal("/users/:name", c.Get("path"))
 
 	c = g.NewContext(nil, nil, "", nil)
-	r.Find("/", c)
+	r.find("/", c)
 	is.NoErr(c.Handler()(c))
 	is.Equal(6, c.Get("f"))
 	is.Equal("/", c.Get("path"))
@@ -1160,40 +1160,40 @@ func TestRouterParamBacktraceNotFound(t *testing.T) {
 	r := g.router
 
 	// Add
-	r.Add("/:param1", func(c Context) error {
+	r.add("/:param1", func(c Context) error {
 		return nil
 	})
-	r.Add("/:param1/foo", func(c Context) error {
+	r.add("/:param1/foo", func(c Context) error {
 		return nil
 	})
-	r.Add("/:param1/bar", func(c Context) error {
+	r.add("/:param1/bar", func(c Context) error {
 		return nil
 	})
-	r.Add("/:param1/bar/:param2", func(c Context) error {
+	r.add("/:param1/bar/:param2", func(c Context) error {
 		return nil
 	})
 
 	c := g.NewContext(nil, nil, "", nil).(*context)
 
 	//Find
-	r.Find("/a", c)
+	r.find("/a", c)
 	is.Equal("a", c.Param("param1"))
 
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/a/foo", c)
+	r.find("/a/foo", c)
 	is.Equal("a", c.Param("param1"))
 
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/a/bar", c)
+	r.find("/a/bar", c)
 	is.Equal("a", c.Param("param1"))
 
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/a/bar/b", c)
+	r.find("/a/bar/b", c)
 	is.Equal("a", c.Param("param1"))
 	is.Equal("b", c.Param("param2"))
 
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/a/bbbbb", c)
+	r.find("/a/bbbbb", c)
 	he := c.handler(c).(*GeminiError)
 	is.Equal(StatusNotFound, he.Code)
 }
@@ -1205,7 +1205,7 @@ func testRouterAPI(t *testing.T, api []*Route) {
 	r := g.router
 
 	for _, route := range api {
-		r.Add(route.Path, func(c Context) error {
+		r.add(route.Path, func(c Context) error {
 			return nil
 		})
 	}
@@ -1213,7 +1213,7 @@ func testRouterAPI(t *testing.T, api []*Route) {
 	c := g.NewContext(nil, nil, "", nil).(*context)
 
 	for _, route := range api {
-		r.Find(route.Path, c)
+		r.find(route.Path, c)
 		tokens := strings.Split(route.Path[1:], "/")
 
 		for _, token := range tokens {
@@ -1280,76 +1280,76 @@ func TestRouterParam1466(t *testing.T) {
 	g := New()
 	r := g.router
 
-	r.Add("/users/signup", func(c Context) error {
+	r.add("/users/signup", func(c Context) error {
 		return nil
 	})
-	r.Add("/users/signup/bulk", func(c Context) error {
+	r.add("/users/signup/bulk", func(c Context) error {
 		return nil
 	})
-	r.Add("/users/survey", func(c Context) error {
+	r.add("/users/survey", func(c Context) error {
 		return nil
 	})
-	r.Add("/users/:username", func(c Context) error {
+	r.add("/users/:username", func(c Context) error {
 		return nil
 	})
-	r.Add("/interests/:name/users", func(c Context) error {
+	r.add("/interests/:name/users", func(c Context) error {
 		return nil
 	})
-	r.Add("/skills/:name/users", func(c Context) error {
+	r.add("/skills/:name/users", func(c Context) error {
 		return nil
 	})
 	// Additional routes for Issue 1479
-	r.Add("/users/:username/likes/projects/ids", func(c Context) error {
+	r.add("/users/:username/likes/projects/ids", func(c Context) error {
 		return nil
 	})
-	r.Add("/users/:username/profile", func(c Context) error {
+	r.add("/users/:username/profile", func(c Context) error {
 		return nil
 	})
-	r.Add("/users/:username/uploads/:type", func(c Context) error {
+	r.add("/users/:username/uploads/:type", func(c Context) error {
 		return nil
 	})
 
 	c := g.NewContext(nil, nil, "", nil).(*context)
 
-	r.Find("/users/ajitem", c)
+	r.find("/users/ajitem", c)
 	is.Equal("ajitem", c.Param("username"))
 
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/users/sharewithme", c)
+	r.find("/users/sharewithme", c)
 	is.Equal("sharewithme", c.Param("username"))
 
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/users/signup", c)
+	r.find("/users/signup", c)
 	is.Equal("", c.Param("username"))
 	// Additional assertions for #1479
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/users/sharewithme/likes/projects/ids", c)
+	r.find("/users/sharewithme/likes/projects/ids", c)
 	is.Equal("sharewithme", c.Param("username"))
 
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/users/ajitem/likes/projects/ids", c)
+	r.find("/users/ajitem/likes/projects/ids", c)
 	is.Equal("ajitem", c.Param("username"))
 
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/users/sharewithme/profile", c)
+	r.find("/users/sharewithme/profile", c)
 	is.Equal("sharewithme", c.Param("username"))
 
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/users/ajitem/profile", c)
+	r.find("/users/ajitem/profile", c)
 	is.Equal("ajitem", c.Param("username"))
 
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/users/sharewithme/uploads/self", c)
+	r.find("/users/sharewithme/uploads/self", c)
 	is.Equal("sharewithme", c.Param("username"))
 	is.Equal("self", c.Param("type"))
 
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/users/ajitem/uploads/self", c)
+	r.find("/users/ajitem/uploads/self", c)
 	is.Equal("ajitem", c.Param("username"))
 	is.Equal("self", c.Param("type"))
 
 	c = g.NewContext(nil, nil, "", nil).(*context)
-	r.Find("/users/tree/free", c)
+	r.find("/users/tree/free", c)
 	is.Equal("", c.Param("id"))
 	is.Equal(Status(0), c.response.Status)
 }
@@ -1362,7 +1362,7 @@ func benchmarkRouterRoutes(b *testing.B, routes []*Route) {
 
 	// Add routes
 	for _, route := range routes {
-		r.Add(route.Path, func(c Context) error {
+		r.add(route.Path, func(c Context) error {
 			return nil
 		})
 	}
@@ -1371,7 +1371,7 @@ func benchmarkRouterRoutes(b *testing.B, routes []*Route) {
 	for i := 0; i < b.N; i++ {
 		for _, route := range gitHubAPI {
 			c := g.pool.Get().(*context)
-			r.Find(route.Path, c)
+			r.find(route.Path, c)
 			g.pool.Put(c)
 		}
 	}
