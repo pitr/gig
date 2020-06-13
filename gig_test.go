@@ -114,6 +114,7 @@ func TestGigMiddleware(t *testing.T) {
 	})
 
 	b := request("/", g)
+
 	is.Equal("-1123", buf.String())
 	is.Equal("20 text/plain; charset=UTF-8\r\nOK", b)
 }
@@ -153,6 +154,7 @@ func TestGigHandle(t *testing.T) {
 	g.Handle("/", func(c Context) error {
 		return c.Text(StatusSuccess, "hello")
 	})
+
 	b := request("/", g)
 	is.Equal("20 text/plain; charset=UTF-8\r\nhello", b)
 }
@@ -187,6 +189,7 @@ func TestGigRoutes(t *testing.T) {
 		{"/repos/:owner/:repo/git/refs", ""},
 		{"/repos/:owner/:repo/git/tags", ""},
 	}
+
 	for _, r := range routes {
 		g.Handle(r.Path, func(c Context) error {
 			return c.Text(StatusSuccess, "OK")
@@ -194,14 +197,17 @@ func TestGigRoutes(t *testing.T) {
 	}
 
 	is.Equal(len(routes), len(g.Routes()))
+
 	for _, r := range g.Routes() {
 		found := false
+
 		for _, rr := range routes {
 			if r.Path == rr.Path {
 				found = true
 				break
 			}
 		}
+
 		if !found {
 			t.Errorf("Route %s not found", r.Path)
 		}
@@ -215,6 +221,7 @@ func TestGigEncodedPath(t *testing.T) {
 	g.Handle("/:id", func(c Context) error {
 		return c.NoContentSuccess()
 	})
+
 	c := newContext("/with%2Fslash")
 	g.ServeGemini(c)
 	is.Equal("20 text/gemini\r\n", c.(*context).conn.(*fakeConn).Written)
@@ -225,12 +232,14 @@ func TestGigGroup(t *testing.T) {
 
 	g := New()
 	buf := new(bytes.Buffer)
+
 	g.Use(MiddlewareFunc(func(next HandlerFunc) HandlerFunc {
 		return func(c Context) error {
 			buf.WriteString("0")
 			return next(c)
 		}
 	}))
+
 	h := func(c Context) error {
 		return c.NoContentSuccess()
 	}
@@ -259,6 +268,7 @@ func TestGigGroup(t *testing.T) {
 			return next(c)
 		}
 	})
+
 	g3 := g2.Group("/group3")
 	g3.Use(func(next HandlerFunc) HandlerFunc {
 		return func(c Context) error {
@@ -301,6 +311,7 @@ func TestGigContext(t *testing.T) {
 
 func TestGigRun(t *testing.T) {
 	g := New()
+
 	go func() {
 		_ = g.Run(":0", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
 	}()
@@ -398,6 +409,7 @@ func TestGigRunByteString(t *testing.T) {
 func request(path string, g *Gig) string {
 	c := newContext(path).(*context)
 	g.ServeGemini(c)
+
 	return c.conn.(*fakeConn).Written
 }
 
@@ -407,7 +419,6 @@ func TestGeminiError(t *testing.T) {
 	t.Run("manual", func(t *testing.T) {
 		err := NewError(StatusSlowDown, "oops")
 		is.Equal("error=oops", err.Error())
-
 	})
 	t.Run("existing", func(t *testing.T) {
 		err := ErrSlowDown

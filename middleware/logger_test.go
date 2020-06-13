@@ -61,6 +61,7 @@ func TestLoggerTemplate(t *testing.T) {
 	buf := new(bytes.Buffer)
 	oldWriter := gig.DefaultWriter
 	gig.DefaultWriter = buf
+
 	defer func() {
 		gig.DefaultWriter = oldWriter
 	}()
@@ -83,29 +84,29 @@ func TestLoggerTemplate(t *testing.T) {
 	g.ServeGemini(c)
 
 	cases := []string{
-		"apagano-param"               ,
-		"\"path\":\"/login\""         ,
-		"\"uri\":\"/login?user"       ,
-		"\"remote_ip\":\"192.0.2.1\"" ,
-		"\"status\":20"               ,
-		"\"bytes_in\":45,"            ,
-		"\"meta\":\"text/gemini"      ,
+		"apagano-param",
+		"\"path\":\"/login\"",
+		"\"uri\":\"/login?user",
+		"\"remote_ip\":\"192.0.2.1\"",
+		"\"status\":20",
+		"\"bytes_in\":45,",
+		"\"meta\":\"text/gemini",
 	}
 
 	for _, token := range cases {
 		is := is.New(t)
-		t.Run(token,func(t *testing.T) {
-is.True(strings.Contains(buf.String(), token))
+		t.Run(token, func(t *testing.T) {
+			is.True(strings.Contains(buf.String(), token))
 		})
 	}
 }
 
 func TestLoggerCustomTimestamp(t *testing.T) {
 	is := is.New(t)
-
 	buf := new(bytes.Buffer)
 	oldWriter := gig.DefaultWriter
 	gig.DefaultWriter = buf
+
 	defer func() {
 		gig.DefaultWriter = oldWriter
 	}()
@@ -132,7 +133,8 @@ func TestLoggerCustomTimestamp(t *testing.T) {
 	if err := json.Unmarshal(buf.Bytes(), &objs); err != nil {
 		is.Fail()
 	}
+
 	loggedTime := *(*string)(unsafe.Pointer(objs["time"]))
 	_, err := time.Parse(customTimeFormat, loggedTime)
-	is.True(err!=nil)
+	is.True(err != nil)
 }

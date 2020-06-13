@@ -21,10 +21,12 @@ func (a *fakeAddr) String() string  { return "192.0.2.1:25" }
 func (c *fakeConn) Read(b []byte) (n int, err error) { return len(b), nil }
 func (c *fakeConn) Write(b []byte) (n int, err error) {
 	if c.failAfter > 0 && len(c.Written)+len(b) > c.failAfter {
-		c.Written = c.Written + string(b[:c.failAfter-len(c.Written)])
+		c.Written += string(b[:c.failAfter-len(c.Written)])
 		return 0, errors.New("cannot write")
 	}
-	c.Written = c.Written + string(b)
+
+	c.Written += string(b)
+
 	return len(b), nil
 }
 func (c *fakeConn) Close() error                       { return nil }
@@ -39,5 +41,6 @@ func newContext(uri string) Context {
 	g := New()
 	maxParam := 20
 	g.maxParam = &maxParam
+
 	return g.NewContext(&fakeConn{}, u, uri, nil)
 }

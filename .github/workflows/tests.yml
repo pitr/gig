@@ -37,8 +37,12 @@ jobs:
         with:
           ref: ${{ github.ref }}
 
+      - name: Install Dependencies
+        run: go get -v golang.org/x/lint/golint
+
       - name: Run Tests
         run: |
+          golint -set_exit_status ./...
           go test --coverprofile=coverage.coverprofile --covermode=atomic ./...
           go test -race ./...
 

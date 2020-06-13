@@ -110,7 +110,7 @@ type (
 	common struct{}
 )
 
-// MIME types
+// MIME types.
 const (
 	MIMEApplicationJSON            = "application/json"
 	MIMEApplicationJSONCharsetUTF8 = MIMEApplicationJSON + "; " + charsetUTF8
@@ -142,7 +142,7 @@ const (
 `
 )
 
-// Errors
+// Errors.
 var (
 	ErrTemporaryFailure              = NewError(StatusTemporaryFailure, "Temporary Failure")
 	ErrServerUnavailable             = NewError(StatusServerUnavailable, "Server Unavailable")
@@ -168,7 +168,7 @@ var (
 	ErrServerClosed = errors.New("gemini: Server closed")
 )
 
-// Error handlers
+// Error handlers.
 var (
 	NotFoundHandler = func(c Context) error {
 		return ErrNotFound
@@ -190,6 +190,7 @@ func New() (g *Gig) {
 		return g.NewContext(nil, nil, "", nil)
 	}
 	g.router = NewRouter(g)
+
 	return
 }
 
@@ -226,13 +227,14 @@ func (g *Gig) DefaultGeminiErrorHandler(err error, c Context) {
 
 	code := he.Code
 	message := he.Message
-	debugPrint("%s", err)
+
+	debugPrintf("%s", err)
 
 	// Send response
 	if !c.Response().Committed {
 		err = c.NoContent(code, message)
 		if err != nil {
-			debugPrint("%s", err)
+			debugPrintf("%s", err)
 		}
 	}
 }
@@ -259,6 +261,7 @@ func (g *Gig) Static(prefix, root string) *Route {
 	if root == "" {
 		root = "." // For security we want to restrict to CWD.
 	}
+
 	return g.static(prefix, root, g.Handle)
 }
 
@@ -268,12 +271,16 @@ func (common) static(prefix, root string, get func(string, HandlerFunc, ...Middl
 		if err != nil {
 			return err
 		}
+
 		name := filepath.Join(root, path.Clean("/"+p)) // "/"+ for security
+
 		return c.File(name)
 	}
+
 	if prefix == "/" {
 		return get(prefix+"*", h)
 	}
+
 	return get(prefix+"/*", h)
 }
 
@@ -291,6 +298,7 @@ func (g *Gig) File(path, file string, m ...MiddlewareFunc) *Route {
 
 func (g *Gig) add(path string, handler HandlerFunc, middleware ...MiddlewareFunc) *Route {
 	name := handlerName(handler)
+
 	g.router.Add(path, func(c Context) error {
 		h := handler
 		// Chain middleware
@@ -299,11 +307,14 @@ func (g *Gig) add(path string, handler HandlerFunc, middleware ...MiddlewareFunc
 		}
 		return h(c)
 	})
+
 	r := &Route{
 		Path: path,
 		Name: name,
 	}
+
 	g.router.routes[path] = r
+
 	return r
 }
 
@@ -311,6 +322,7 @@ func (g *Gig) add(path string, handler HandlerFunc, middleware ...MiddlewareFunc
 func (g *Gig) Group(prefix string, m ...MiddlewareFunc) (gg *Group) {
 	gg = &Group{prefix: prefix, gig: g}
 	gg.Use(m...)
+
 	return
 }
 
@@ -325,6 +337,7 @@ func (g *Gig) Reverse(name string, params ...interface{}) string {
 	uri := new(bytes.Buffer)
 	ln := len(params)
 	n := 0
+
 	for _, r := range g.router.routes {
 		if r.Name == name {
 			for i, l := 0, len(r.Path); i < l; i++ {
@@ -334,13 +347,16 @@ func (g *Gig) Reverse(name string, params ...interface{}) string {
 					uri.WriteString(fmt.Sprintf("%v", params[n]))
 					n++
 				}
+
 				if i < l {
 					uri.WriteByte(r.Path[i])
 				}
 			}
+
 			break
 		}
 	}
+
 	return uri.String()
 }
 
@@ -350,6 +366,7 @@ func (g *Gig) Routes() []*Route {
 	for _, v := range g.router.routes {
 		routes = append(routes, v)
 	}
+
 	return routes
 }
 
@@ -365,7 +382,7 @@ func (g *Gig) ReleaseContext(c Context) {
 	g.pool.Put(c)
 }
 
-// ServeGemini serves Gemini request
+// ServeGemini serves Gemini request.
 func (g *Gig) ServeGemini(c Context) {
 	var h HandlerFunc
 
@@ -395,17 +412,18 @@ func (g *Gig) ServeGemini(c Context) {
 // If `certFile` or `keyFile` is `string` the values are treated as file paths.
 // If `certFile` or `keyFile` is `[]byte` the values are treated as the certificate or key as-is.
 func (g *Gig) Run(address string, certFile, keyFile interface{}) (err error) {
-	var cert []byte
+	var cert, key []byte
+
 	if cert, err = filepathOrContent(certFile); err != nil {
 		return
 	}
 
-	var key []byte
 	if key, err = filepathOrContent(keyFile); err != nil {
 		return
 	}
 
 	g.TLSConfig.Certificates = make([]tls.Certificate, 1)
+
 	if g.TLSConfig.Certificates[0], err = tls.X509KeyPair(cert, key); err != nil {
 		return
 	}
@@ -429,7 +447,7 @@ func (g *Gig) startTLS(address string) error {
 
 	// Setup
 	if !g.HideBanner {
-		debugPrint(banner, "v"+Version)
+		debugPrintf(banner, "v"+Version)
 	}
 
 	g.mu.Lock()
@@ -438,14 +456,17 @@ func (g *Gig) startTLS(address string) error {
 		if err != nil {
 			return err
 		}
+
 		g.Listener = tls.NewListener(l, g.TLSConfig)
 	}
 	g.mu.Unlock()
+
 	defer g.Listener.Close()
 
 	if !g.HidePort {
-		debugPrint("⇨ gemini server started on %s\n", g.Listener.Addr())
+		debugPrintf("⇨ gemini server started on %s\n", g.Listener.Addr())
 	}
+
 	return g.serve()
 }
 
@@ -467,19 +488,23 @@ func (g *Gig) serve() error {
 				} else {
 					tempDelay *= 2
 				}
+
 				if max := 1 * time.Second; tempDelay > max {
 					tempDelay = max
 				}
-				debugPrint("gemini: Accept error: %v; retrying in %v", err, tempDelay)
+
+				debugPrintf("gemini: Accept error: %v; retrying in %v", err, tempDelay)
 				time.Sleep(tempDelay)
+
 				continue
 			}
+
 			return err
 		}
 
 		tc, ok := conn.(*tls.Conn)
 		if !ok {
-			debugPrint("gemini: non-tls connection")
+			debugPrintf("gemini: non-tls connection")
 			continue
 		}
 
@@ -493,43 +518,54 @@ func (g *Gig) handleRequest(conn *tls.Conn) {
 	if d := g.ReadTimeout; d != 0 {
 		err := conn.SetReadDeadline(time.Now().Add(d))
 		if err != nil {
-			debugPrint("%s", err)
+			debugPrintf("%s", err)
 		}
 	}
 
 	reader := bufio.NewReaderSize(conn, 1024)
 	request, overflow, err := reader.ReadLine()
+
 	if overflow {
-		debugPrint("gemini: request overflow")
+		debugPrintf("gemini: request overflow")
+
 		_, _ = conn.Write([]byte(fmt.Sprintf("%d %s\r\n", StatusBadRequest, "Request too long!")))
+
 		return
 	} else if err != nil {
-		debugPrint("gemini: %s", err)
+		debugPrintf("gemini: %s", err)
+
 		_, _ = conn.Write([]byte(fmt.Sprintf("%d %s\r\n", StatusBadRequest, "Unknown error reading request!")))
+
 		return
 	}
 
 	RequestURI := string(request)
 	URL, err := url.Parse(RequestURI)
+
 	if err != nil {
-		debugPrint("gemini: %s", err)
+		debugPrintf("gemini: %s", err)
+
 		_, _ = conn.Write([]byte(fmt.Sprintf("%d %s\r\n", StatusBadRequest, "Error parsing URL!")))
+
 		return
 	}
+
 	if URL.Scheme == "" {
 		URL.Scheme = "gemini"
 	}
 
 	if URL.Scheme != "gemini" {
-		debugPrint("gemini: non-gemini scheme: %s", RequestURI)
+		debugPrintf("gemini: non-gemini scheme: %s", RequestURI)
+
 		_, _ = conn.Write([]byte(fmt.Sprintf("%d %s\r\n", StatusBadRequest, "No proxying to non-Gemini content!")))
+
 		return
 	}
 
 	if d := g.WriteTimeout; d != 0 {
 		err := conn.SetWriteDeadline(time.Now().Add(d))
 		if err != nil {
-			debugPrint("%s", err)
+			debugPrintf("%s", err)
 		}
 	}
 
@@ -554,9 +590,11 @@ func (g *Gig) Close() error {
 	})
 	g.mu.Lock()
 	defer g.mu.Unlock()
+
 	if g.Listener != nil {
 		return g.Listener.Close()
 	}
+
 	return nil
 }
 
@@ -575,12 +613,13 @@ func (ge *GeminiError) Error() string {
 	return fmt.Sprintf("error=%s", ge.Message)
 }
 
-// GetPath returns RawPath, if it's empty returns Path from URL
-func GetPath(URL *url.URL) string {
-	path := URL.RawPath
+// GetPath returns RawPath, if it's empty returns Path from URL.
+func GetPath(u *url.URL) string {
+	path := u.RawPath
 	if path == "" {
-		path = URL.Path
+		path = u.Path
 	}
+
 	return path
 }
 
@@ -589,6 +628,7 @@ func handlerName(h HandlerFunc) string {
 	if t.Kind() == reflect.Func {
 		return runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
 	}
+
 	return t.String()
 }
 
@@ -613,6 +653,7 @@ func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
 	// Ignore error from setting the KeepAlivePeriod as some systems, such as
 	// OpenBSD, do not support setting TCP_USER_TIMEOUT on IPPROTO_TCP
 	_ = c.(*net.TCPConn).SetKeepAlivePeriod(3 * time.Minute)
+
 	return
 }
 
@@ -621,6 +662,7 @@ func newListener(address string) (*tcpKeepAliveListener, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &tcpKeepAliveListener{l.(*net.TCPListener)}, nil
 }
 
@@ -628,5 +670,6 @@ func applyMiddleware(h HandlerFunc, middleware ...MiddlewareFunc) HandlerFunc {
 	for i := len(middleware) - 1; i >= 0; i-- {
 		h = middleware[i](h)
 	}
+
 	return h
 }

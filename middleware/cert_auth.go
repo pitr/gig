@@ -29,35 +29,38 @@ var (
 )
 
 // ValidateHasCertificate returns ErrClientCertificateRequired if no certificate is sent.
-// It also stores subject name in context under "subject"
+// It also stores subject name in context under "subject".
 func ValidateHasCertificate(cert *x509.Certificate, c gig.Context) *gig.GeminiError {
 	if cert == nil {
 		return gig.ErrClientCertificateRequired
 	}
-	name := cert.Subject.CommonName
-	c.Set("subject", name)
+
+	c.Set("subject", cert.Subject.CommonName)
+
 	return nil
 }
 
 // ValidateHasTransientCertificate returns ErrTransientCertificateRequested if no certificate is sent.
-// It also stores subject name in context under "subject"
+// It also stores subject name in context under "subject".
 func ValidateHasTransientCertificate(cert *x509.Certificate, c gig.Context) *gig.GeminiError {
 	if cert == nil {
 		return gig.ErrTransientCertificateRequested
 	}
-	name := cert.Subject.CommonName
-	c.Set("subject", name)
+
+	c.Set("subject", cert.Subject.CommonName)
+
 	return nil
 }
 
 // ValidateHasAuthorisedCertificate returns ErrAuthorisedCertificateRequired if no certificate is sent.
-// It also stores subject name in context under "subject"
+// It also stores subject name in context under "subject".
 func ValidateHasAuthorisedCertificate(cert *x509.Certificate, c gig.Context) *gig.GeminiError {
 	if cert == nil {
 		return gig.ErrAuthorisedCertificateRequired
 	}
-	name := cert.Subject.CommonName
-	c.Set("subject", name)
+
+	c.Set("subject", cert.Subject.CommonName)
+
 	return nil
 }
 
@@ -67,6 +70,7 @@ func ValidateHasAuthorisedCertificate(cert *x509.Certificate, c gig.Context) *gi
 func CertAuth(fn CertAuthValidator) gig.MiddlewareFunc {
 	c := DefaultCertAuthConfig
 	c.Validator = fn
+
 	return CertAuthWithConfig(c)
 }
 
@@ -77,6 +81,7 @@ func CertAuthWithConfig(config CertAuthConfig) gig.MiddlewareFunc {
 	if config.Validator == nil {
 		config.Validator = DefaultCertAuthConfig.Validator
 	}
+
 	if config.Skipper == nil {
 		config.Skipper = DefaultCertAuthConfig.Skipper
 	}

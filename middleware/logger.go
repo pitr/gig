@@ -72,6 +72,7 @@ func LoggerWithConfig(config LoggerConfig) gig.MiddlewareFunc {
 	if config.Skipper == nil {
 		config.Skipper = DefaultLoggerConfig.Skipper
 	}
+
 	if config.Format == "" {
 		config.Format = DefaultLoggerConfig.Format
 	}
@@ -90,12 +91,15 @@ func LoggerWithConfig(config LoggerConfig) gig.MiddlewareFunc {
 			}
 
 			start := time.Now()
+
 			if err = next(c); err != nil {
 				c.Error(err)
 			}
+
 			stop := time.Now()
 			buf := config.pool.Get().(*bytes.Buffer)
 			buf.Reset()
+
 			defer config.pool.Put(buf)
 
 			res := c.Response()
@@ -151,6 +155,7 @@ func LoggerWithConfig(config LoggerConfig) gig.MiddlewareFunc {
 			}
 
 			fmt.Fprint(gig.DefaultWriter, buf.String())
+
 			return
 		}
 	}

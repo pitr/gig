@@ -27,9 +27,10 @@ func NewResponse(w io.Writer) (r *Response) {
 // are mainly used to send error codes.
 func (r *Response) WriteHeader(code Status, meta string) error {
 	if r.Committed {
-		debugPrint("response already committed")
+		debugPrintf("response already committed")
 		return nil
 	}
+
 	r.Status = code
 	r.Meta = meta
 	n, err := r.Writer.Write([]byte(fmt.Sprintf("%d %s\r\n", code, meta)))
@@ -45,13 +46,17 @@ func (r *Response) Write(b []byte) (n int, err error) {
 		if r.Status == 0 {
 			r.Status = StatusSuccess
 		}
+
 		err = r.WriteHeader(r.Status, "text/gemini")
+
 		if err != nil {
 			return
 		}
 	}
+
 	n, err = r.Writer.Write(b)
 	r.Size += int64(n)
+
 	return
 }
 

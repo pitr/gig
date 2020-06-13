@@ -7,24 +7,17 @@ import (
 	"github.com/matryer/is"
 )
 
-// TODO: Fix me
-func TestGroup(t *testing.T) {
-	g := New().Group("/group")
-	h := func(Context) error { return nil }
-	g.Handle("/", h)
-	g.Static("/static", "/tmp")
-	g.File("/walle", "_fixture/images//walle.png")
-}
-
 func TestGroupFile(t *testing.T) {
 	gig := New()
 	g := gig.Group("/group")
 	g.File("/walle", "_fixture/images/walle.png")
+
 	expectedData, err := ioutil.ReadFile("_fixture/images/walle.png")
 
 	is := is.New(t)
 
 	is.NoErr(err)
+
 	c := newContext("/group/walle")
 	gig.ServeGemini(c)
 	is.Equal("20 image/png\r\n"+string(expectedData), c.(*context).conn.(*fakeConn).Written)
@@ -60,6 +53,7 @@ func TestGroupRouteMiddleware(t *testing.T) {
 			return c.NoContent(40, "another")
 		}
 	}
+
 	g.Use(m1, m2, m3)
 	g.Handle("/40_1", h, m4)
 	g.Handle("/40_2", h, m5)
@@ -89,6 +83,7 @@ func TestGroupRouteMiddlewareWithMatchAny(t *testing.T) {
 	h := func(c Context) error {
 		return c.Text(StatusSuccess, c.Path())
 	}
+
 	g.Use(m1)
 	g.Handle("/help", h, m2)
 	g.Handle("/*", h, m2)
@@ -110,5 +105,4 @@ func TestGroupRouteMiddlewareWithMatchAny(t *testing.T) {
 	is.Equal("20 text/plain; charset=UTF-8\r\n/*", b)
 	b = request("/", gig)
 	is.Equal("20 text/plain; charset=UTF-8\r\n", b)
-
 }

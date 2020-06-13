@@ -51,6 +51,7 @@ func TestFakeConn(t *testing.T) {
 
 	n, err = conn.Write([]byte("more"))
 	is.Equal(1, n)
+
 	if err == nil {
 		is.Fail()
 	}

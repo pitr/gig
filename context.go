@@ -121,7 +121,7 @@ type (
 )
 
 const (
-	indexPage     = "index.gmi"
+	indexPage = "index.gmi"
 )
 
 func (c *context) Response() *Response {
@@ -137,6 +137,7 @@ func (c *context) Certificate() *x509.Certificate {
 	if c.TLS == nil || len(c.TLS.PeerCertificates) == 0 {
 		return nil
 	}
+
 	return c.TLS.PeerCertificates[0]
 }
 
@@ -164,6 +165,7 @@ func (c *context) Param(name string) string {
 			}
 		}
 	}
+
 	return ""
 }
 
@@ -174,6 +176,7 @@ func (c *context) QueryString() string {
 func (c *context) Get(key string) interface{} {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
+
 	return c.store[key]
 }
 
@@ -184,6 +187,7 @@ func (c *context) Set(key string, val interface{}) {
 	if c.store == nil {
 		c.store = make(Map)
 	}
+
 	c.store[key] = val
 }
 
@@ -191,9 +195,11 @@ func (c *context) Render(code Status, name string, data interface{}) (err error)
 	if c.gig.Renderer == nil {
 		return ErrRendererNotRegistered
 	}
+
 	if err = c.response.WriteHeader(code, MIMETextGeminiCharsetUTF8); err != nil {
 		return
 	}
+
 	return c.gig.Renderer.Render(c.response, name, data, c)
 }
 
@@ -214,7 +220,9 @@ func (c *context) Blob(code Status, contentType string, b []byte) (err error) {
 	if err != nil {
 		return
 	}
+
 	_, err = c.response.Write(b)
+
 	return
 }
 
@@ -223,7 +231,9 @@ func (c *context) Stream(code Status, contentType string, r io.Reader) (err erro
 	if err != nil {
 		return
 	}
+
 	_, err = io.Copy(c.response, r)
+
 	return
 }
 
@@ -233,10 +243,12 @@ func (c *context) File(file string) (err error) {
 		c.Error(ErrNotFound)
 		return
 	}
+
 	if uint64(s.Mode().Perm())&0444 != 0444 {
 		c.Error(ErrGone)
 		return
 	}
+
 	if s.IsDir() {
 		files, err := ioutil.ReadDir(file)
 		if err != nil {
@@ -249,10 +261,13 @@ func (c *context) File(file string) (err error) {
 				return c.File(path.Join(file, indexPage))
 			}
 		}
+
 		err = c.response.WriteHeader(StatusSuccess, "text/gemini")
+
 		if err != nil {
 			return err
 		}
+
 		_, _ = c.response.Write([]byte(fmt.Sprintf("# Listing %s\n\n", file)))
 
 		sort.Slice(files, func(i, j int) bool { return files[i].Name() < files[j].Name() })
@@ -268,10 +283,12 @@ func (c *context) File(file string) (err error) {
 
 			_, _ = c.response.Write([]byte(fmt.Sprintf("=> %s %s [ %v ]\n", filepath.Clean(path.Join(c.path, file.Name())), file.Name(), bytefmt(file.Size()))))
 		}
+
 		return nil
 	}
 
 	ext := filepath.Ext(file)
+
 	var mimeType string
 	if ext == ".gmi" {
 		mimeType = "text/gemini"
@@ -290,15 +307,19 @@ func (c *context) File(file string) (err error) {
 	defer f.Close()
 
 	err = c.response.WriteHeader(StatusSuccess, mimeType)
+
 	if err != nil {
 		return
 	}
+
 	_, err = io.Copy(c.response, f)
+
 	if err != nil {
 		// .. remote closed the connection, nothing we can do besides log
 		// or io error, but status is already sent, everything is broken!
 		c.Error(ErrTemporaryFailure)
 	}
+
 	return
 }
 
@@ -314,6 +335,7 @@ func (c *context) Redirect(code Status, url string) error {
 	if code < 30 || code >= 40 {
 		return ErrInvalidRedirectCode
 	}
+
 	return c.response.WriteHeader(code, url)
 }
 
@@ -350,14 +372,18 @@ func (c *context) Reset(conn net.Conn, u *url.URL, requestURI string, tls *tls.C
 }
 
 func bytefmt(b int64) string {
-        const unit = 1000
-        if b < unit {
-                return fmt.Sprintf("%dB", b)
-        }
-        div, exp := int64(unit), 0
-        for n := b / unit; n >= unit; n /= unit {
-                div *= unit
-                exp++
-        }
-        return fmt.Sprintf("%.1f%cB", float64(b)/float64(div), "kMGTPE"[exp])
+	const unit = 1000
+
+	if b < unit {
+		return fmt.Sprintf("%dB", b)
+	}
+
+	div, exp := int64(unit), 0
+
+	for n := b / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+
+	return fmt.Sprintf("%.1f%cB", float64(b)/float64(div), "kMGTPE"[exp])
 }

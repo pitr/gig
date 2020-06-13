@@ -21,11 +21,12 @@ var (
 	Debug = true
 )
 
-func debugPrint(format string, values ...interface{}) {
+func debugPrintf(format string, values ...interface{}) {
 	if Debug {
 		if !strings.HasSuffix(format, "\n") {
 			format += "\n"
 		}
+
 		fmt.Fprintf(DefaultWriter, "[gig-debug] "+format, values...)
 	}
 }

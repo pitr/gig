@@ -47,9 +47,11 @@ func (r *Router) Add(path string, h HandlerFunc) {
 	if path == "" {
 		path = "/"
 	}
+
 	if path[0] != '/' {
 		path = "/" + path
 	}
+
 	pnames := []string{} // Param names
 	ppath := path        // Pristine path
 
@@ -58,6 +60,7 @@ func (r *Router) Add(path string, h HandlerFunc) {
 			j := i + 1
 
 			r.insert(path[:i], nil, skind, "", nil)
+
 			for ; i < l && path[i] != '/'; i++ {
 			}
 
@@ -91,6 +94,7 @@ func (r *Router) insert(path string, h HandlerFunc, t kind, ppath string, pnames
 	if cn == nil {
 		panic("gig: invalid tree")
 	}
+
 	search := path
 
 	for {
@@ -103,20 +107,23 @@ func (r *Router) insert(path string, h HandlerFunc, t kind, ppath string, pnames
 		if sl < max {
 			max = sl
 		}
+
 		for ; l < max && search[l] == cn.prefix[l]; l++ {
 		}
 
-		if l == 0 {
+		switch {
+		case l == 0:
 			// At root node
 			cn.label = search[0]
 			cn.prefix = search
+
 			if h != nil {
 				cn.kind = t
 				cn.handler = h
 				cn.ppath = ppath
 				cn.pnames = pnames
 			}
-		} else if l < pl {
+		case l < pl:
 			// Split node
 			n := newNode(cn.kind, cn.prefix[l:], cn, cn.children, cn.handler, cn.ppath, cn.pnames)
 
@@ -147,9 +154,10 @@ func (r *Router) insert(path string, h HandlerFunc, t kind, ppath string, pnames
 				n.handler = h
 				cn.addChild(n)
 			}
-		} else if l < sl {
+		case l < sl:
 			search = search[l:]
 			c := cn.findChildWithLabel(search[0])
+
 			if c != nil {
 				// Go deeper
 				cn = c
@@ -159,16 +167,16 @@ func (r *Router) insert(path string, h HandlerFunc, t kind, ppath string, pnames
 			n := newNode(t, search, cn, nil, nil, ppath, pnames)
 			n.handler = h
 			cn.addChild(n)
-		} else {
+		case h != nil:
 			// Node already exists
-			if h != nil {
-				cn.handler = h
-				cn.ppath = ppath
-				if len(cn.pnames) == 0 { // Issue #729
-					cn.pnames = pnames
-				}
+			cn.handler = h
+			cn.ppath = ppath
+
+			if len(cn.pnames) == 0 {
+				cn.pnames = pnames
 			}
 		}
+
 		return
 	}
 }
@@ -196,6 +204,7 @@ func (n *node) findChild(l byte, t kind) *node {
 			return c
 		}
 	}
+
 	return nil
 }
 
@@ -205,6 +214,7 @@ func (n *node) findChildWithLabel(l byte) *node {
 			return c
 		}
 	}
+
 	return nil
 }
 
@@ -214,6 +224,7 @@ func (n *node) findChildByKind(t kind) *node {
 			return c
 		}
 	}
+
 	return nil
 }
 
@@ -258,6 +269,7 @@ func (r *Router) Find(path string, c Context) {
 			if sl < max {
 				max = sl
 			}
+
 			for ; l < max && search[l] == cn.prefix[l]; l++ {
 			}
 		}
@@ -277,11 +289,14 @@ func (r *Router) Find(path string, c Context) {
 			if path[len(path)-1] == '/' && cn.findChildByKind(akind) != nil {
 				goto Any
 			}
-			if nn == nil { // Issue #1348
+
+			if nn == nil {
 				return // Not found
 			}
+
 			cn = nn
 			search = ns
+
 			if nk == pkind {
 				goto Param
 			} else if nk == akind {
@@ -292,25 +307,26 @@ func (r *Router) Find(path string, c Context) {
 		// Static node
 		if child = cn.findChild(search[0], skind); child != nil {
 			// Save next
-			if cn.prefix[len(cn.prefix)-1] == '/' { // Issue #623
+			if cn.prefix[len(cn.prefix)-1] == '/' {
 				nk = pkind
 				nn = cn
 				ns = search
 			}
+
 			cn = child
+
 			continue
 		}
 
 	Param:
 		// Param node
 		if child = cn.findChildByKind(pkind); child != nil {
-			// Issue #378
 			if len(pvalues) == n {
 				continue
 			}
 
 			// Save next
-			if cn.prefix[len(cn.prefix)-1] == '/' { // Issue #623
+			if cn.prefix[len(cn.prefix)-1] == '/' {
 				nk = akind
 				nn = cn
 				ns = search
@@ -358,25 +374,30 @@ func (r *Router) Find(path string, c Context) {
 			// No param route found, try to resolve nearest any route
 			for {
 				np := nn.parent
+
 				if cn = nn.findChildByKind(akind); cn != nil {
 					break
 				}
+
 				if np == nil {
 					break // no further parent nodes in tree, abort
 				}
+
 				var str strings.Builder
+
 				str.WriteString(nn.prefix)
 				str.WriteString(search)
 				search = str.String()
 				nn = np
 			}
+
 			if cn != nil { // use the found "any" route and update path
 				pvalues[len(cn.pnames)-1] = search
 				break
 			}
 		}
-		return // Not found
 
+		return // Not found
 	}
 
 	ctx.handler = cn.handler
@@ -391,11 +412,13 @@ func (r *Router) Find(path string, c Context) {
 		if cn = cn.findChildByKind(akind); cn == nil {
 			return
 		}
+
 		if cn.handler != nil {
 			ctx.handler = cn.handler
 		} else {
 			ctx.handler = NotFoundHandler
 		}
+
 		ctx.path = cn.ppath
 		ctx.pnames = cn.pnames
 		pvalues[len(cn.pnames)-1] = ""

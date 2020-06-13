@@ -518,6 +518,7 @@ func TestRouterEmpty(t *testing.T) {
 		c.Set("path", path)
 		return nil
 	})
+
 	c := g.NewContext(nil, nil, "", nil).(*context)
 	r.Find(path, c)
 
@@ -533,6 +534,7 @@ func TestRouterStatic(t *testing.T) {
 		c.Set("path", path)
 		return nil
 	})
+
 	c := g.NewContext(nil, nil, "", nil).(*context)
 	r.Find(path, c)
 
@@ -547,6 +549,7 @@ func TestRouterParam(t *testing.T) {
 	r.Add("/users/:id", func(c Context) error {
 		return nil
 	})
+
 	c := g.NewContext(nil, nil, "", nil).(*context)
 	r.Find("/users/1", c)
 
@@ -560,6 +563,7 @@ func TestRouterTwoParam(t *testing.T) {
 	r.Add("/users/:uid/files/:fid", func(Context) error {
 		return nil
 	})
+
 	c := g.NewContext(nil, nil, "", nil).(*context)
 
 	r.Find("/users/1/files/1", c)
@@ -629,6 +633,7 @@ func TestRouterMatchAny(t *testing.T) {
 	r.Add("/users/*", func(Context) error {
 		return nil
 	})
+
 	c := g.NewContext(nil, nil, "", nil).(*context)
 
 	is := is.New(t)
@@ -644,7 +649,7 @@ func TestRouterMatchAny(t *testing.T) {
 }
 
 // TestRouterMatchAnySlash shall verify finding the best route
-// for any routes with trailing slash requests
+// for any routes with trailing slash requests.
 func TestRouterMatchAnySlash(t *testing.T) {
 	g := New()
 	r := g.router
@@ -714,7 +719,6 @@ func TestRouterMatchAnySlash(t *testing.T) {
 	is.NoErr(c.handler(c))
 	is.Equal("/assets/*", c.Get("path"))
 	is.Equal("", c.Param("*"))
-
 }
 
 func TestRouterMatchAnyMultiLevel(t *testing.T) {
@@ -816,7 +820,6 @@ func TestRouterMatchAnyMultiLevelWithPost(t *testing.T) {
 	is.NoErr(c.handler(c))
 	is.Equal("/api/*", c.Get("path"))
 	is.Equal("other/test", c.Param("*"))
-
 }
 
 func TestRouterMicroParam(t *testing.T) {
@@ -827,6 +830,7 @@ func TestRouterMicroParam(t *testing.T) {
 	r.Add("/:a/:b/:c", func(c Context) error {
 		return nil
 	})
+
 	c := g.NewContext(nil, nil, "", nil).(*context)
 	r.Find("/1/2/3", c)
 	is.Equal("1", c.Param("a"))
@@ -844,6 +848,7 @@ func TestRouterMixParamMatchAny(t *testing.T) {
 	r.Add("/users/:id/*", func(c Context) error {
 		return nil
 	})
+
 	c := g.NewContext(nil, nil, "", nil).(*context)
 
 	r.Find("/users/joe/comments", c)
@@ -865,6 +870,7 @@ func TestRouterMultiRoute(t *testing.T) {
 	r.Add("/users/:id", func(c Context) error {
 		return nil
 	})
+
 	c := g.NewContext(nil, nil, "", nil).(*context)
 
 	// Route > /users
@@ -1070,6 +1076,7 @@ func TestRouterParamNames(t *testing.T) {
 	r.Add("/users/:uid/files/:fid", func(c Context) error {
 		return nil
 	})
+
 	c := g.NewContext(nil, nil, "", nil).(*context)
 
 	// Route > /users
@@ -1202,10 +1209,13 @@ func testRouterAPI(t *testing.T, api []*Route) {
 			return nil
 		})
 	}
+
 	c := g.NewContext(nil, nil, "", nil).(*context)
+
 	for _, route := range api {
 		r.Find(route.Path, c)
 		tokens := strings.Split(route.Path[1:], "/")
+
 		for _, token := range tokens {
 			if token[0] == ':' {
 				is.Equal(c.Param(token[1:]), token)
@@ -1234,12 +1244,14 @@ func TestRouterParamOrdering(t *testing.T) {
 		{"/:a/:g/:id", ""},
 	}
 	testRouterAPI(t, api)
+
 	api2 := []*Route{
 		{"/:a/:id", ""},
 		{"/:a/:g/:id", ""},
 		{"/:a/:b/:c/:id", ""},
 	}
 	testRouterAPI(t, api2)
+
 	api3 := []*Route{
 		{"/:a/:b/:c/:id", ""},
 		{"/:a/:g/:id", ""},
@@ -1254,6 +1266,7 @@ func TestRouterMixedParams(t *testing.T) {
 		{"/teacher/:id", ""},
 	}
 	testRouterAPI(t, api)
+
 	api2 := []*Route{
 		{"/teacher/:id", ""},
 		{"/teacher/:tid/room/suggestions", ""},
@@ -1344,6 +1357,7 @@ func TestRouterParam1466(t *testing.T) {
 func benchmarkRouterRoutes(b *testing.B, routes []*Route) {
 	g := New()
 	r := g.router
+
 	b.ReportAllocs()
 
 	// Add routes

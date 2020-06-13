@@ -34,6 +34,7 @@ func (g *Group) Group(prefix string, middleware ...MiddlewareFunc) *Group {
 	m := make([]MiddlewareFunc, 0, len(g.middleware)+len(middleware))
 	m = append(m, g.middleware...)
 	m = append(m, middleware...)
+
 	return g.gig.Group(g.prefix+prefix, m...)
 }
 
@@ -55,5 +56,6 @@ func (g *Group) Add(path string, handler HandlerFunc, middleware ...MiddlewareFu
 	m := make([]MiddlewareFunc, 0, len(g.middleware)+len(middleware))
 	m = append(m, g.middleware...)
 	m = append(m, middleware...)
+
 	return g.gig.add(g.prefix+path, handler, m...)
 }

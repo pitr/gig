@@ -137,11 +137,11 @@ func TestContextRequestURI(t *testing.T) {
 
 func TestContextGetParam(t *testing.T) {
 	g := New()
-	r := g.Router()
-	r.Add("/:foo", func(Context) error { return nil })
 	c := newContext("/bar")
-
 	is := is.New(t)
+	r := g.Router()
+
+	r.Add("/:foo", func(Context) error { return nil })
 
 	// round-trip param values with modification
 	is.Equal("", c.Param("bar"))
@@ -162,6 +162,7 @@ func TestContextRedirect(t *testing.T) {
 func TestContextStore(t *testing.T) {
 	c := new(context)
 	c.Set("name", "Jon Snow")
+
 	is := is.New(t)
 	is.Equal("Jon Snow", c.Get("name"))
 }
@@ -177,6 +178,7 @@ func BenchmarkContext_Store(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		c.Set("name", "Jon Snow")
+
 		if c.Get("name") != "Jon Snow" {
 			b.Fail()
 		}
@@ -192,6 +194,7 @@ func TestContextHandler(t *testing.T) {
 		_, err := b.Write([]byte("handler"))
 		return err
 	})
+
 	c := g.NewContext(nil, nil, "", nil)
 	r.Find("/handler", c)
 	err := c.Handler()(c)

@@ -15,6 +15,7 @@ func TestRecover(t *testing.T) {
 	buf := new(bytes.Buffer)
 	oldWriter := gig.DefaultWriter
 	gig.DefaultWriter = buf
+
 	defer func() {
 		gig.DefaultWriter = oldWriter
 	}()
@@ -36,6 +37,7 @@ func TestRecover_Defaults(t *testing.T) {
 	buf := new(bytes.Buffer)
 	oldWriter := gig.DefaultWriter
 	gig.DefaultWriter = buf
+
 	defer func() {
 		gig.DefaultWriter = oldWriter
 	}()

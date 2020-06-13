@@ -1,6 +1,6 @@
 package gig
 
-// Status is a Gemini status code type
+// Status is a Gemini status code type.
 type Status int
 
 // Gemini status codes as documented by specification.

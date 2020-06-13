@@ -21,9 +21,11 @@ func TestCertAuth(t *testing.T) {
 		if cert == nil {
 			return gig.ErrClientCertificateRequired
 		}
+
 		if cert.Subject.CommonName != "gig-tester" {
 			return gig.ErrCertificateNotAccepted
 		}
+
 		return nil
 	}
 	h := CertAuth(f)(func(c gig.Context) error {

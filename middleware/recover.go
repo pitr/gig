@@ -51,6 +51,7 @@ func RecoverWithConfig(config RecoverConfig) gig.MiddlewareFunc {
 	if config.Skipper == nil {
 		config.Skipper = DefaultRecoverConfig.Skipper
 	}
+
 	if config.StackSize == 0 {
 		config.StackSize = DefaultRecoverConfig.StackSize
 	}
@@ -67,14 +68,17 @@ func RecoverWithConfig(config RecoverConfig) gig.MiddlewareFunc {
 					if !ok {
 						err = fmt.Errorf("%v", r)
 					}
+
 					if !config.DisablePrintStack {
 						stack := make([]byte, config.StackSize)
 						length := runtime.Stack(stack, !config.DisableStackAll)
 						fmt.Fprintf(gig.DefaultWriter, "[PANIC RECOVER] %v %s\n", err, stack[:length])
 					}
+
 					c.Error(err)
 				}
 			}()
+
 			return next(c)
 		}
 	}
