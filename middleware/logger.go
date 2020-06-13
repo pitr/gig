@@ -132,7 +132,7 @@ func LoggerWithConfig(config LoggerConfig) gig.MiddlewareFunc {
 					}
 				case "latency":
 					ms := float64(stop.Sub(start)) / float64(time.Millisecond)
-					return buf.WriteString(strconv.FormatFloat(ms, 'f', -1, 64))
+					return fmt.Fprintf(buf, "%.2f", ms)
 				case "latency_human":
 					return buf.WriteString(stop.Sub(start).String())
 				case "bytes_in":
