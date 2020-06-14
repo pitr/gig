@@ -14,7 +14,7 @@ var (
 	// output io.Writer.
 	// To support coloring in Windows use:
 	// 		import "github.com/mattn/go-colorable"
-	// 		gin.DefaultWriter = colorable.NewColorableStdout()
+	// 		gig.DefaultWriter = colorable.NewColorableStdout()
 	DefaultWriter io.Writer = os.Stdout
 
 	// Debug enables gig to print its internal debug messages.

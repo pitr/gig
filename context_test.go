@@ -30,7 +30,8 @@ func (t *TemplateFail) Render(w io.Writer, name string, data interface{}, c Cont
 }
 
 func TestContext(t *testing.T) {
-	c := newContext("/").(*context)
+	g := New()
+	c, conn := g.NewFakeContext("/", nil)
 
 	is := is.New(t)
 
@@ -38,7 +39,9 @@ func TestContext(t *testing.T) {
 	is.True(c.Gig() != nil)
 
 	// Conn
-	is.True(c.conn != nil)
+	if conn == nil {
+		panic("staticcheck SA5011 false positive, conn cannot be nil here")
+	}
 
 	// Response
 	is.True(c.Response() != nil)
@@ -47,57 +50,58 @@ func TestContext(t *testing.T) {
 	// Render
 	//--------
 
-	c.gig.Renderer = &Template{
+	g.Renderer = &Template{
 		templates: template.Must(template.New("hello").Parse("Hello, {{.}}!")),
 	}
 	err := c.Render(StatusSuccess, "hello", "Jon Snow")
 	is.NoErr(err)
-	is.Equal(fmt.Sprintf("%d %s\r\nHello, Jon Snow!", StatusSuccess, MIMETextGeminiCharsetUTF8), c.conn.(*fakeConn).Written)
+	is.Equal("20 text/gemini\r\nHello, Jon Snow!", conn.Written)
 
-	c.gig.Renderer = &TemplateFail{}
+	g.Renderer = &TemplateFail{}
 	err = c.Render(StatusSuccess, "hello", "Jon Snow")
 	is.True(err != nil)
 
-	c.gig.Renderer = nil
+	g.Renderer = nil
 	err = c.Render(StatusSuccess, "hello", "Jon Snow")
 	is.True(err != nil)
 
 	// Text
-	c = newContext("/").(*context)
+	c, conn = g.NewFakeContext("/", nil)
 
-	err = c.Text(StatusSuccess, "Hello, World!")
+	err = c.Text(StatusSuccess, "Hello, %s!", "World")
 	is.NoErr(err)
-	is.Equal(fmt.Sprintf("%d %s\r\nHello, World!", StatusSuccess, MIMETextPlainCharsetUTF8), c.conn.(*fakeConn).Written)
+	is.Equal(fmt.Sprintf("%d %s\r\nHello, World!", StatusSuccess, MIMETextPlain), conn.Written)
 
 	// Gemini
-	c = newContext("/").(*context)
+	c, conn = g.NewFakeContext("/", nil)
 
-	err = c.Gemini(StatusSuccess, "Hello, World!")
+	err = c.Gemini(StatusSuccess, "Hello, %s!", "World")
 	is.NoErr(err)
-	is.Equal(fmt.Sprintf("%d %s\r\nHello, World!", StatusSuccess, MIMETextGeminiCharsetUTF8), c.conn.(*fakeConn).Written)
+	is.Equal(fmt.Sprintf("%d %s\r\nHello, World!", StatusSuccess, MIMETextGemini), conn.Written)
 
 	// Stream
-	c = newContext("/").(*context)
+	c, conn = g.NewFakeContext("/", nil)
 
 	r := strings.NewReader("response from a stream")
 	err = c.Stream(StatusSuccess, "application/octet-stream", r)
 	is.NoErr(err)
-	is.Equal(fmt.Sprintf("%d application/octet-stream\r\nresponse from a stream", StatusSuccess), c.conn.(*fakeConn).Written)
+	is.Equal(fmt.Sprintf("%d application/octet-stream\r\nresponse from a stream", StatusSuccess), conn.Written)
 
-	c = newContext("/").(*context)
-	c.conn.(*fakeConn).failAfter = 1
+	c, conn = g.NewFakeContext("/", nil)
+	conn.FailAfter = 1
+
 	is.True(c.Stream(StatusSuccess, "application/octet-stream", r) != nil)
 
 	// Error
-	c = newContext("/").(*context)
+	c, conn = g.NewFakeContext("/", nil)
 
 	c.Error(errors.New("error"))
-	is.Equal(fmt.Sprintf("%d error\r\n", StatusPermanentFailure), c.conn.(*fakeConn).Written)
+	is.Equal(fmt.Sprintf("%d error\r\n", StatusPermanentFailure), conn.Written)
 
 	// Reset
 	c.Set("foe", "ban")
-	c.reset(nil, nil, "", nil)
-	is.Equal(0, len(c.store))
+	c.(*context).reset(nil, nil, "", nil)
+	is.Equal(0, len(c.(*context).store))
 	is.Equal("", c.Path())
 }
 
@@ -131,11 +135,12 @@ func TestContextRequestURI(t *testing.T) {
 
 func TestContextGetParam(t *testing.T) {
 	g := New()
-	c := newContext("/bar")
 	is := is.New(t)
 	r := g.router
 
 	r.add("/:foo", func(Context) error { return nil })
+
+	c, _ := g.NewFakeContext("/bar", nil)
 
 	// round-trip param values with modification
 	is.Equal("", c.Param("bar"))
@@ -144,13 +149,12 @@ func TestContextGetParam(t *testing.T) {
 	c.(*context).reset(nil, nil, "", nil)
 }
 
-func TestContextRedirect(t *testing.T) {
-	c := newContext("/").(*context)
+func TestContextNoContent(t *testing.T) {
+	c, conn := New().NewFakeContext("/", nil)
 	is := is.New(t)
 
-	is.Equal(nil, c.Redirect(StatusRedirectPermanent, "gemini://gus.guru/"))
-	is.Equal("31 gemini://gus.guru/\r\n", c.conn.(*fakeConn).Written)
-	is.True(c.Redirect(StatusSuccess, "gemini://gus.guru/") != nil)
+	is.NoErr(c.NoContent(StatusRedirectPermanent, "gemini://gus.guru/"))
+	is.Equal("31 gemini://gus.guru/\r\n", conn.Written)
 }
 
 func TestContextStore(t *testing.T) {
@@ -211,7 +215,7 @@ func TestContext_Path(t *testing.T) {
 func TestContext_QueryString(t *testing.T) {
 	queryString := "some+val"
 
-	c := newContext("/?" + queryString)
+	c, _ := New().NewFakeContext("/?"+queryString, nil)
 	is := is.New(t)
 
 	q, err := c.QueryString()
@@ -220,22 +224,22 @@ func TestContext_QueryString(t *testing.T) {
 }
 
 func TestContext_IP(t *testing.T) {
-	c := newContext("/").(*context)
+	c, _ := New().NewFakeContext("/", nil)
 
 	is := is.New(t)
 	is.Equal("192.0.2.1", c.IP())
 }
 
 func TestContext_Certificate(t *testing.T) {
-	c := newContext("/").(*context)
+	c, _ := New().NewFakeContext("/", nil)
 	is := is.New(t)
 
 	is.Equal(c.Certificate(), nil)
 
 	cert := &x509.Certificate{}
-	c.TLS = &tls.ConnectionState{
+	c, _ = New().NewFakeContext("/", &tls.ConnectionState{
 		PeerCertificates: []*x509.Certificate{cert},
-	}
+	})
 
 	is.Equal(cert, c.Certificate())
 }

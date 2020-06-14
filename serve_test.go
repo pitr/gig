@@ -33,7 +33,7 @@ func (l *errorListener) Close() error {
 }
 
 func (l *errorListener) Addr() net.Addr {
-	return &fakeAddr{}
+	return &FakeAddr{}
 }
 
 func TestServe_NetError(t *testing.T) {

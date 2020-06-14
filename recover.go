@@ -1,10 +1,8 @@
-package middleware
+package gig
 
 import (
 	"fmt"
 	"runtime"
-
-	"github.com/pitr/gig"
 )
 
 type (
@@ -40,13 +38,13 @@ var (
 
 // Recover returns a middleware which recovers from panics anywhere in the chain
 // and handles the control to the centralized GeminiErrorHandler.
-func Recover() gig.MiddlewareFunc {
+func Recover() MiddlewareFunc {
 	return RecoverWithConfig(DefaultRecoverConfig)
 }
 
 // RecoverWithConfig returns a Recover middleware with config.
 // See: `Recover()`.
-func RecoverWithConfig(config RecoverConfig) gig.MiddlewareFunc {
+func RecoverWithConfig(config RecoverConfig) MiddlewareFunc {
 	// Defaults
 	if config.Skipper == nil {
 		config.Skipper = DefaultRecoverConfig.Skipper
@@ -56,8 +54,8 @@ func RecoverWithConfig(config RecoverConfig) gig.MiddlewareFunc {
 		config.StackSize = DefaultRecoverConfig.StackSize
 	}
 
-	return func(next gig.HandlerFunc) gig.HandlerFunc {
-		return func(c gig.Context) error {
+	return func(next HandlerFunc) HandlerFunc {
+		return func(c Context) error {
 			if config.Skipper(c) {
 				return next(c)
 			}
@@ -72,7 +70,7 @@ func RecoverWithConfig(config RecoverConfig) gig.MiddlewareFunc {
 					if !config.DisablePrintStack {
 						stack := make([]byte, config.StackSize)
 						length := runtime.Stack(stack, !config.DisableStackAll)
-						fmt.Fprintf(gig.DefaultWriter, "[PANIC RECOVER] %v %s\n", err, stack[:length])
+						fmt.Fprintf(DefaultWriter, "[PANIC RECOVER] %v %s\n", err, stack[:length])
 					}
 
 					c.Error(err)

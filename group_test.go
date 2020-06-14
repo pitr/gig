@@ -18,9 +18,9 @@ func TestGroupFile(t *testing.T) {
 
 	is.NoErr(err)
 
-	c := newContext("/group/walle")
+	c, conn := gig.NewFakeContext("/group/walle", nil)
 	gig.ServeGemini(c)
-	is.Equal("20 image/png\r\n"+string(expectedData), c.(*context).conn.(*fakeConn).Written)
+	is.Equal("20 image/png\r\n"+string(expectedData), conn.Written)
 }
 
 func TestGroupRouteMiddleware(t *testing.T) {
@@ -94,15 +94,15 @@ func TestGroupRouteMiddlewareWithMatchAny(t *testing.T) {
 	is := is.New(t)
 
 	b := request("/group/help", gig)
-	is.Equal("20 text/plain; charset=UTF-8\r\n/group/help", b)
+	is.Equal("20 text/plain\r\n/group/help", b)
 	b = request("/group/help/other", gig)
-	is.Equal("20 text/plain; charset=UTF-8\r\n/group/*", b)
+	is.Equal("20 text/plain\r\n/group/*", b)
 	b = request("/group/404", gig)
-	is.Equal("20 text/plain; charset=UTF-8\r\n/group/*", b)
+	is.Equal("20 text/plain\r\n/group/*", b)
 	b = request("/group", gig)
-	is.Equal("20 text/plain; charset=UTF-8\r\n/group", b)
+	is.Equal("20 text/plain\r\n/group", b)
 	b = request("/other", gig)
-	is.Equal("20 text/plain; charset=UTF-8\r\n/*", b)
+	is.Equal("20 text/plain\r\n/*", b)
 	b = request("/", gig)
-	is.Equal("20 text/plain; charset=UTF-8\r\n", b)
+	is.Equal("20 text/plain\r\n", b)
 }

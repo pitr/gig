@@ -7,7 +7,7 @@ import (
 )
 
 func TestResponse(t *testing.T) {
-	conn := &fakeConn{}
+	conn := &FakeConn{}
 	res := &Response{Writer: conn}
 
 	is := is.New(t)
@@ -18,7 +18,7 @@ func TestResponse(t *testing.T) {
 }
 
 func TestResponse_Write_FallsBackToDefaultStatus(t *testing.T) {
-	conn := &fakeConn{}
+	conn := &FakeConn{}
 	res := &Response{Writer: conn}
 
 	is := is.New(t)
@@ -29,7 +29,7 @@ func TestResponse_Write_FallsBackToDefaultStatus(t *testing.T) {
 }
 
 func TestResponse_Write_Fails(t *testing.T) {
-	conn := &fakeConn{failAfter: 1}
+	conn := &FakeConn{FailAfter: 1}
 	res := &Response{Writer: conn}
 
 	is := is.New(t)
@@ -40,7 +40,7 @@ func TestResponse_Write_Fails(t *testing.T) {
 }
 
 func TestResponse_Double_WriteHeader(t *testing.T) {
-	conn := &fakeConn{}
+	conn := &FakeConn{}
 	res := &Response{Writer: conn}
 
 	is := is.New(t)
@@ -51,7 +51,7 @@ func TestResponse_Double_WriteHeader(t *testing.T) {
 }
 
 func TestResponse_Write_UsesSetResponseCode(t *testing.T) {
-	conn := &fakeConn{}
+	conn := &FakeConn{}
 	res := &Response{Writer: conn}
 
 	is := is.New(t)

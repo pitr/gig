@@ -1,9 +1,7 @@
-package middleware
+package gig
 
 import (
 	"crypto/x509"
-
-	"github.com/pitr/gig"
 )
 
 type (
@@ -18,7 +16,7 @@ type (
 	}
 
 	// CertAuthValidator defines a function to validate CertAuth credentials.
-	CertAuthValidator func(*x509.Certificate, gig.Context) *gig.GeminiError
+	CertAuthValidator func(*x509.Certificate, Context) *GeminiError
 )
 
 var (
@@ -30,9 +28,9 @@ var (
 
 // ValidateHasCertificate returns ErrClientCertificateRequired if no certificate is sent.
 // It also stores subject name in context under "subject".
-func ValidateHasCertificate(cert *x509.Certificate, c gig.Context) *gig.GeminiError {
+func ValidateHasCertificate(cert *x509.Certificate, c Context) *GeminiError {
 	if cert == nil {
-		return gig.ErrClientCertificateRequired
+		return ErrClientCertificateRequired
 	}
 
 	c.Set("subject", cert.Subject.CommonName)
@@ -42,9 +40,9 @@ func ValidateHasCertificate(cert *x509.Certificate, c gig.Context) *gig.GeminiEr
 
 // ValidateHasTransientCertificate returns ErrTransientCertificateRequested if no certificate is sent.
 // It also stores subject name in context under "subject".
-func ValidateHasTransientCertificate(cert *x509.Certificate, c gig.Context) *gig.GeminiError {
+func ValidateHasTransientCertificate(cert *x509.Certificate, c Context) *GeminiError {
 	if cert == nil {
-		return gig.ErrTransientCertificateRequested
+		return ErrTransientCertificateRequested
 	}
 
 	c.Set("subject", cert.Subject.CommonName)
@@ -54,9 +52,9 @@ func ValidateHasTransientCertificate(cert *x509.Certificate, c gig.Context) *gig
 
 // ValidateHasAuthorisedCertificate returns ErrAuthorisedCertificateRequired if no certificate is sent.
 // It also stores subject name in context under "subject".
-func ValidateHasAuthorisedCertificate(cert *x509.Certificate, c gig.Context) *gig.GeminiError {
+func ValidateHasAuthorisedCertificate(cert *x509.Certificate, c Context) *GeminiError {
 	if cert == nil {
-		return gig.ErrAuthorisedCertificateRequired
+		return ErrAuthorisedCertificateRequired
 	}
 
 	c.Set("subject", cert.Subject.CommonName)
@@ -67,7 +65,7 @@ func ValidateHasAuthorisedCertificate(cert *x509.Certificate, c gig.Context) *gi
 // CertAuth returns an CertAuth middleware.
 //
 // For valid credentials it calls the next handler.
-func CertAuth(fn CertAuthValidator) gig.MiddlewareFunc {
+func CertAuth(fn CertAuthValidator) MiddlewareFunc {
 	c := DefaultCertAuthConfig
 	c.Validator = fn
 
@@ -76,7 +74,7 @@ func CertAuth(fn CertAuthValidator) gig.MiddlewareFunc {
 
 // CertAuthWithConfig returns an CertAuth middleware with config.
 // See `CertAuth()`.
-func CertAuthWithConfig(config CertAuthConfig) gig.MiddlewareFunc {
+func CertAuthWithConfig(config CertAuthConfig) MiddlewareFunc {
 	// Defaults
 	if config.Validator == nil {
 		config.Validator = DefaultCertAuthConfig.Validator
@@ -86,8 +84,8 @@ func CertAuthWithConfig(config CertAuthConfig) gig.MiddlewareFunc {
 		config.Skipper = DefaultCertAuthConfig.Skipper
 	}
 
-	return func(next gig.HandlerFunc) gig.HandlerFunc {
-		return func(c gig.Context) error {
+	return func(next HandlerFunc) HandlerFunc {
+		return func(c Context) error {
 			if config.Skipper(c) {
 				return next(c)
 			}

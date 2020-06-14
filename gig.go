@@ -7,24 +7,19 @@ Example:
 
   import (
     "github.com/pitr/gig"
-    "github.com/pitr/gig/middleware"
   )
 
   func main() {
     // Gig instance
-    g := gig.New()
-
-    // Middleware
-    g.Use(middleware.Logger())
-    g.Use(middleware.Recover())
+    g := gig.Default()
 
     // Routes
-    g.Handle("/", func(c gig.Context) error {
-        return c.Gemini(gig.StatusSuccess, "# Hello, World!")
+    g.Handle("/user/:name", func(c gig.Context) error {
+        return c.Gemini(gig.StatusSuccess, "# Hello, %s!", c.Param("name"))
     })
 
     // Start server
-    panic(g.Run(":1965", "my.crt", "my.key"))
+    g.Run("my.crt", "my.key")
   }
 */
 package gig
@@ -39,6 +34,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/url"
+	"os"
 	"path"
 	"path/filepath"
 	"reflect"
@@ -116,20 +112,10 @@ type (
 
 // MIME types.
 const (
-	MIMEApplicationJSON            = "application/json"
-	MIMEApplicationJSONCharsetUTF8 = MIMEApplicationJSON + "; " + charsetUTF8
-	MIMEApplicationXML             = "application/xml"
-	MIMEApplicationXMLCharsetUTF8  = MIMEApplicationXML + "; " + charsetUTF8
-	MIMETextXML                    = "text/xml"
-	MIMETextXMLCharsetUTF8         = MIMETextXML + "; " + charsetUTF8
-	MIMETextGemini                 = "text/gemini"
-	MIMETextGeminiCharsetUTF8      = MIMETextGemini + "; " + charsetUTF8
-	MIMETextPlain                  = "text/plain"
-	MIMETextPlainCharsetUTF8       = MIMETextPlain + "; " + charsetUTF8
-)
-
-const (
-	charsetUTF8 = "charset=UTF-8"
+	MIMETextGemini            = "text/gemini"
+	MIMETextGeminiCharsetUTF8 = "text/gemini; charset=UTF-8"
+	MIMETextPlain             = "text/plain"
+	MIMETextPlainCharsetUTF8  = "text/plain; charset=UTF-8"
 )
 
 const (
@@ -166,7 +152,6 @@ var (
 	ErrExpiredCertificateRejected    = NewError(StatusExpiredCertificateRejected, "Expired Certificate Rejected")
 
 	ErrRendererNotRegistered = errors.New("renderer not registered")
-	ErrInvalidRedirectCode   = errors.New("invalid redirect status code")
 	ErrInvalidCertOrKeyType  = errors.New("invalid cert or key type, must be string or []byte")
 
 	ErrServerClosed = errors.New("gemini: Server closed")
@@ -219,6 +204,16 @@ func New() *Gig {
 		return g.NewContext(nil, nil, "", nil)
 	}
 	g.router = newRouter(g)
+
+	return g
+}
+
+// Default returns a Gig instance with Logger and Recover middleware enabled.
+func Default() *Gig {
+	g := New()
+
+	// Default middlewares
+	g.Use(Logger(), Recover())
 
 	return g
 }
@@ -398,8 +393,26 @@ func (g *Gig) ServeGemini(c Context) {
 // Run starts a Gemini server.
 // If `certFile` or `keyFile` is `string` the values are treated as file paths.
 // If `certFile` or `keyFile` is `[]byte` the values are treated as the certificate or key as-is.
-func (g *Gig) Run(address string, certFile, keyFile interface{}) (err error) {
-	var cert, key []byte
+func (g *Gig) Run(args ...interface{}) (err error) {
+	var (
+		cert, key         []byte
+		certFile, keyFile interface{}
+		addr              string
+	)
+
+	switch len(args) {
+	case 2:
+		addr, certFile, keyFile = os.Getenv("PORT"), args[0], args[1]
+		if addr == "" {
+			addr = ":1965"
+		} else {
+			addr = ":" + addr
+		}
+	case 3:
+		addr, certFile, keyFile = args[0].(string), args[1], args[2]
+	default:
+		panic("must specify 2 or 3 arguments to Run")
+	}
 
 	if cert, err = filepathOrContent(certFile); err != nil {
 		return
@@ -415,7 +428,7 @@ func (g *Gig) Run(address string, certFile, keyFile interface{}) (err error) {
 		return
 	}
 
-	return g.startTLS(address)
+	return g.startTLS(addr)
 }
 
 func filepathOrContent(fileOrContent interface{}) (content []byte, err error) {

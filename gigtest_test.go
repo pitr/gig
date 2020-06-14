@@ -1,20 +1,19 @@
-package gigtest
+package gig
 
 import (
 	"testing"
 	"time"
 
 	"github.com/matryer/is"
-	"github.com/pitr/gig"
 )
 
-func TestNewContext(t *testing.T) {
+func TestNewFakeContext(t *testing.T) {
 	is := is.New(t)
-	g := gig.New()
+	g := New()
 
-	c, conn := NewContext(g, "/login", nil)
+	c, conn := g.NewFakeContext("/login", nil)
 
-	is.NoErr(c.Response().WriteHeader(gig.StatusGone, "oops"))
+	is.NoErr(c.Response().WriteHeader(StatusGone, "oops"))
 	is.Equal("52 oops\r\n", conn.Written)
 
 	n, err := conn.Read(make([]byte, 1))

@@ -15,14 +15,14 @@ func TestGig(t *testing.T) {
 	is := is.New(t)
 
 	g := New()
-	c := newContext("/").(*context)
+	c, conn := g.NewFakeContext("/", nil)
 
 	// Router
 	is.True(g.router != nil)
 
 	// DefaultGeminiErrorHandler
 	DefaultGeminiErrorHandler(errors.New("error"), c)
-	is.Equal("50 error\r\n", c.conn.(*fakeConn).Written)
+	is.Equal("50 error\r\n", conn.Written)
 }
 
 func TestGigStatic(t *testing.T) {
@@ -116,7 +116,7 @@ func TestGigMiddleware(t *testing.T) {
 	b := request("/", g)
 
 	is.Equal("-1123", buf.String())
-	is.Equal("20 text/plain; charset=UTF-8\r\nOK", b)
+	is.Equal("20 text/plain\r\nOK", b)
 }
 
 func TestGigMiddlewareError(t *testing.T) {
@@ -144,7 +144,7 @@ func TestGigHandler(t *testing.T) {
 	})
 
 	b := request("/ok", g)
-	is.Equal("20 text/plain; charset=UTF-8\r\nOK", b)
+	is.Equal("20 text/plain\r\nOK", b)
 }
 
 func TestGigHandle(t *testing.T) {
@@ -156,7 +156,7 @@ func TestGigHandle(t *testing.T) {
 	})
 
 	b := request("/", g)
-	is.Equal("20 text/plain; charset=UTF-8\r\nhello", b)
+	is.Equal("20 text/plain\r\nhello", b)
 }
 
 func TestGigURL(t *testing.T) {
@@ -222,9 +222,9 @@ func TestGigEncodedPath(t *testing.T) {
 		return c.NoContent(StatusInput, "please enter name")
 	})
 
-	c := newContext("/with%2Fslash")
+	c, conn := g.NewFakeContext("/with%2Fslash", nil)
 	g.ServeGemini(c)
-	is.Equal("10 please enter name\r\n", c.(*context).conn.(*fakeConn).Written)
+	is.Equal("10 please enter name\r\n", conn.Written)
 }
 
 func TestGigGroup(t *testing.T) {
@@ -294,9 +294,9 @@ func TestGigNotFound(t *testing.T) {
 	is := is.New(t)
 
 	g := New()
-	c := newContext("/files").(*context)
+	c, conn := g.NewFakeContext("/files", nil)
 	g.ServeGemini(c)
-	is.Equal("51 Not Found\r\n", c.conn.(*fakeConn).Written)
+	is.Equal("51 Not Found\r\n", conn.Written)
 }
 
 func TestGigRun(t *testing.T) {
@@ -397,10 +397,10 @@ func TestGigRunByteString(t *testing.T) {
 }
 
 func request(path string, g *Gig) string {
-	c := newContext(path).(*context)
+	c, conn := g.NewFakeContext(path, nil)
 	g.ServeGemini(c)
 
-	return c.conn.(*fakeConn).Written
+	return conn.Written
 }
 
 func TestGeminiError(t *testing.T) {

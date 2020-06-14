@@ -1,4 +1,4 @@
-package middleware
+package gig
 
 import (
 	"bytes"
@@ -10,63 +10,61 @@ import (
 	"unsafe"
 
 	"github.com/matryer/is"
-	"github.com/pitr/gig"
-	"github.com/pitr/gig/gigtest"
 )
 
 func TestLogger(t *testing.T) {
 	is := is.New(t)
 
 	// Note: Just for the test coverage, not a real test.
-	g := gig.New()
-	c, _ := gigtest.NewContext(g, "/", nil)
+	g := New()
+	c, _ := g.NewFakeContext("/", nil)
 
-	h := Logger()(func(c gig.Context) error {
-		return c.Gemini(gig.StatusSuccess, "test")
+	h := Logger()(func(c Context) error {
+		return c.Gemini(StatusSuccess, "test")
 	})
 
 	// Status 2x
 	is.NoErr(h(c))
 
 	// Status 3x
-	c, _ = gigtest.NewContext(g, "/", nil)
-	h = Logger()(func(c gig.Context) error {
-		return c.NoContent(gig.StatusRedirectTemporary, "test")
+	c, _ = g.NewFakeContext("/", nil)
+	h = Logger()(func(c Context) error {
+		return c.NoContent(StatusRedirectTemporary, "test")
 	})
 	is.NoErr(h(c))
 
 	// Status 4x
-	c, _ = gigtest.NewContext(g, "/", nil)
-	h = Logger()(func(c gig.Context) error {
-		return c.NoContent(gig.StatusSlowDown, "test")
+	c, _ = g.NewFakeContext("/", nil)
+	h = Logger()(func(c Context) error {
+		return c.NoContent(StatusSlowDown, "test")
 	})
 	is.NoErr(h(c))
 
 	// Status 5x with empty path
-	c, _ = gigtest.NewContext(g, "/", nil)
-	h = Logger()(func(c gig.Context) error {
+	c, _ = g.NewFakeContext("/", nil)
+	h = Logger()(func(c Context) error {
 		return errors.New("error")
 	})
 	is.NoErr(h(c))
 
 	// Status 6x with empty path
-	c, _ = gigtest.NewContext(g, "/", nil)
-	h = Logger()(func(c gig.Context) error {
-		return c.NoContent(gig.StatusTransientCertificateRequested, "test")
+	c, _ = g.NewFakeContext("/", nil)
+	h = Logger()(func(c Context) error {
+		return c.NoContent(StatusTransientCertificateRequested, "test")
 	})
 	is.NoErr(h(c))
 }
 
 func TestLoggerTemplate(t *testing.T) {
 	buf := new(bytes.Buffer)
-	oldWriter := gig.DefaultWriter
-	gig.DefaultWriter = buf
+	oldWriter := DefaultWriter
+	DefaultWriter = buf
 
 	defer func() {
-		gig.DefaultWriter = oldWriter
+		DefaultWriter = oldWriter
 	}()
 
-	g := gig.New()
+	g := New()
 	g.Use(LoggerWithConfig(LoggerConfig{
 		Format: `{"time":"${time_rfc3339_nano}","time_unix":"${time_unix}",` +
 			`"time_unix_nano":"${time_unix_nano}","time_rfc3339":"${time_rfc3339}",` +
@@ -76,11 +74,11 @@ func TestLoggerTemplate(t *testing.T) {
 			`"bytes_out":${bytes_out},"us":"${query}","meta":"${meta}"}` + "\n",
 	}))
 
-	g.Handle("/login", func(c gig.Context) error {
-		return c.Gemini(gig.StatusSuccess, "Header Logged")
+	g.Handle("/login", func(c Context) error {
+		return c.Gemini(StatusSuccess, "Header Logged")
 	})
 
-	c, _ := gigtest.NewContext(g, "/login?username=apagano-param&password=secret", nil)
+	c, _ := g.NewFakeContext("/login?username=apagano-param&password=secret", nil)
 	g.ServeGemini(c)
 
 	cases := []string{
@@ -104,15 +102,15 @@ func TestLoggerTemplate(t *testing.T) {
 func TestLoggerCustomTimestamp(t *testing.T) {
 	is := is.New(t)
 	buf := new(bytes.Buffer)
-	oldWriter := gig.DefaultWriter
-	gig.DefaultWriter = buf
+	oldWriter := DefaultWriter
+	DefaultWriter = buf
 
 	defer func() {
-		gig.DefaultWriter = oldWriter
+		DefaultWriter = oldWriter
 	}()
 
 	customTimeFormat := "2006-01-02 15:04:05.00000"
-	g := gig.New()
+	g := New()
 	g.Use(LoggerWithConfig(LoggerConfig{
 		Format: `{"time":"${time_custom}","id":"${id}","remote_ip":"${remote_ip}","host":"${host}","user_agent":"${user_agent}",` +
 			`"method":"${method}","uri":"${uri}","status":${status}, "latency":${latency},` +
@@ -122,11 +120,11 @@ func TestLoggerCustomTimestamp(t *testing.T) {
 		CustomTimeFormat: customTimeFormat,
 	}))
 
-	g.Handle("/", func(c gig.Context) error {
-		return c.Gemini(gig.StatusSuccess, "custom time stamp test")
+	g.Handle("/", func(c Context) error {
+		return c.Gemini(StatusSuccess, "custom time stamp test")
 	})
 
-	c, _ := gigtest.NewContext(g, "/", nil)
+	c, _ := g.NewFakeContext("/", nil)
 	g.ServeGemini(c)
 
 	var objs map[string]*json.RawMessage

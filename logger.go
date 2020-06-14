@@ -1,4 +1,4 @@
-package middleware
+package gig
 
 import (
 	"bytes"
@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pitr/gig"
 	"github.com/valyala/fasttemplate"
 )
 
@@ -41,10 +40,10 @@ type (
 		// Example "${remote_ip} ${status}"
 		//
 		// Optional. Default value DefaultLoggerConfig.Format.
-		Format string `yaml:"format"`
+		Format string
 
 		// Optional. Default value DefaultLoggerConfig.CustomTimeFormat.
-		CustomTimeFormat string `yaml:"custom_time_format"`
+		CustomTimeFormat string
 
 		template *fasttemplate.Template
 		pool     *sync.Pool
@@ -55,19 +54,19 @@ var (
 	// DefaultLoggerConfig is the default Logger middleware config.
 	DefaultLoggerConfig = LoggerConfig{
 		Skipper:          DefaultSkipper,
-		Format:           "path=${path} status=${status} duration=${latency} ${error}\n",
+		Format:           "time=\"${time_rfc3339}\" path=${path} status=${status} duration=${latency} ${error}\n",
 		CustomTimeFormat: "2006-01-02 15:04:05.00000",
 	}
 )
 
 // Logger returns a middleware that logs Gemini requests.
-func Logger() gig.MiddlewareFunc {
+func Logger() MiddlewareFunc {
 	return LoggerWithConfig(DefaultLoggerConfig)
 }
 
 // LoggerWithConfig returns a Logger middleware with config.
 // See: `Logger()`.
-func LoggerWithConfig(config LoggerConfig) gig.MiddlewareFunc {
+func LoggerWithConfig(config LoggerConfig) MiddlewareFunc {
 	// Defaults
 	if config.Skipper == nil {
 		config.Skipper = DefaultLoggerConfig.Skipper
@@ -84,8 +83,8 @@ func LoggerWithConfig(config LoggerConfig) gig.MiddlewareFunc {
 		},
 	}
 
-	return func(next gig.HandlerFunc) gig.HandlerFunc {
-		return func(c gig.Context) (err error) {
+	return func(next HandlerFunc) HandlerFunc {
+		return func(c Context) (err error) {
 			if config.Skipper(c) {
 				return next(c)
 			}
@@ -123,7 +122,7 @@ func LoggerWithConfig(config LoggerConfig) gig.MiddlewareFunc {
 				case "uri":
 					return buf.WriteString(c.RequestURI())
 				case "path":
-					p := c.Path()
+					p := c.URL().Path
 					if p == "" {
 						p = "/"
 					}
@@ -157,7 +156,7 @@ func LoggerWithConfig(config LoggerConfig) gig.MiddlewareFunc {
 				return
 			}
 
-			fmt.Fprint(gig.DefaultWriter, buf.String())
+			fmt.Fprint(DefaultWriter, buf.String())
 
 			return
 		}

@@ -1,18 +1,15 @@
 package main
 
-import (
-	"github.com/pitr/gig"
-	"github.com/pitr/gig/middleware"
-)
+import "github.com/pitr/gig"
 
 func main() {
 	g := gig.New()
 
-	g.Use(middleware.Logger())
+	g.Use(gig.Logger())
 
 	g.Static("", "astrobotany/")
 
-	plant := g.Group("/plant", middleware.CertAuth(middleware.ValidateHasCertificate))
+	plant := g.Group("/plant", gig.CertAuth(gig.ValidateHasCertificate))
 	{
 		plant.Handle("", func(c gig.Context) error {
 			return c.Gemini(gig.StatusSuccess, "Hello "+c.Get("subject").(string))

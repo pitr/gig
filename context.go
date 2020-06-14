@@ -20,6 +20,7 @@ import (
 type (
 	// Context represents the context of the current request. It holds connection
 	// reference, path, path parameters, data and registered handler.
+	// DO NOT retain Context instance, as it will be reused by other connections.
 	Context interface {
 		// Response returns `*Response`.
 		Response() *Response
@@ -58,13 +59,13 @@ type (
 		Render(code Status, name string, data interface{}) error
 
 		// Gemini sends a text/gemini response with status code.
-		Gemini(code Status, text string) error
+		Gemini(code Status, text string, args ...interface{}) error
 
 		// GeminiBlob sends a text/gemini blob response with status code.
 		GeminiBlob(code Status, b []byte) error
 
 		// Text sends a text/plain response with status code.
-		Text(code Status, s string) error
+		Text(code Status, format string, values ...interface{}) error
 
 		// Blob sends a blob response with status code and content type.
 		Blob(code Status, contentType string, b []byte) error
@@ -76,10 +77,8 @@ type (
 		File(file string) error
 
 		// NoContent sends a response with no body, and a status code and meta field.
-		NoContent(code Status, meta string) error
-
-		// Redirect redirects the request to a provided URL with status code.
-		Redirect(code Status, url string) error
+		// Use for any non-2x status codes
+		NoContent(code Status, meta string, values ...interface{}) error
 
 		// Error invokes the registered error handler. Generally used by middleware.
 		Error(err error)
@@ -179,23 +178,23 @@ func (c *context) Render(code Status, name string, data interface{}) (err error)
 		return ErrRendererNotRegistered
 	}
 
-	if err = c.response.WriteHeader(code, MIMETextGeminiCharsetUTF8); err != nil {
+	if err = c.response.WriteHeader(code, MIMETextGemini); err != nil {
 		return
 	}
 
 	return c.gig.Renderer.Render(c.response, name, data, c)
 }
 
-func (c *context) Gemini(code Status, text string) (err error) {
-	return c.GeminiBlob(code, []byte(text))
+func (c *context) Gemini(code Status, format string, values ...interface{}) error {
+	return c.GeminiBlob(code, []byte(fmt.Sprintf(format, values...)))
 }
 
 func (c *context) GeminiBlob(code Status, b []byte) (err error) {
-	return c.Blob(code, MIMETextGeminiCharsetUTF8, b)
+	return c.Blob(code, MIMETextGemini, b)
 }
 
-func (c *context) Text(code Status, s string) (err error) {
-	return c.Blob(code, MIMETextPlainCharsetUTF8, []byte(s))
+func (c *context) Text(code Status, format string, values ...interface{}) (err error) {
+	return c.Blob(code, MIMETextPlain, []byte(fmt.Sprintf(format, values...)))
 }
 
 func (c *context) Blob(code Status, contentType string, b []byte) (err error) {
@@ -306,16 +305,8 @@ func (c *context) File(file string) (err error) {
 	return
 }
 
-func (c *context) NoContent(code Status, meta string) error {
-	return c.response.WriteHeader(code, meta)
-}
-
-func (c *context) Redirect(code Status, url string) error {
-	if code < 30 || code >= 40 {
-		return ErrInvalidRedirectCode
-	}
-
-	return c.response.WriteHeader(code, url)
+func (c *context) NoContent(code Status, meta string, values ...interface{}) error {
+	return c.response.WriteHeader(code, fmt.Sprintf(meta, values...))
 }
 
 func (c *context) Error(err error) {

@@ -1,4 +1,4 @@
-package gigtest
+package gig
 
 import (
 	"crypto/tls"
@@ -6,8 +6,6 @@ import (
 	"net"
 	"net/url"
 	"time"
-
-	"github.com/pitr/gig"
 )
 
 type (
@@ -62,8 +60,8 @@ func (c *FakeConn) SetReadDeadline(t time.Time) error { return nil }
 // SetWriteDeadline always returns nil.
 func (c *FakeConn) SetWriteDeadline(t time.Time) error { return nil }
 
-// NewContext returns gig.Context that writes to FakeConn.
-func NewContext(g *gig.Gig, uri string, tlsState *tls.ConnectionState) (gig.Context, *FakeConn) {
+// NewFakeContext returns Context that writes to FakeConn.
+func (g *Gig) NewFakeContext(uri string, tlsState *tls.ConnectionState) (Context, *FakeConn) {
 	u, err := url.Parse(uri)
 	if err != nil {
 		panic(err)
