@@ -3,9 +3,7 @@ package main
 import "github.com/pitr/gig"
 
 func main() {
-	g := gig.New()
-
-	g.Use(gig.Logger())
+	g := gig.Default()
 
 	g.Static("", "astrobotany/")
 
