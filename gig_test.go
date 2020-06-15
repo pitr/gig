@@ -110,7 +110,7 @@ func TestGigMiddleware(t *testing.T) {
 
 	// Route
 	g.Handle("/", func(c Context) error {
-		return c.Text(StatusSuccess, "OK")
+		return c.Text("OK")
 	})
 
 	b := request("/", g)
@@ -140,7 +140,7 @@ func TestGigHandler(t *testing.T) {
 
 	// HandlerFunc
 	g.Handle("/ok", func(c Context) error {
-		return c.Text(StatusSuccess, "OK")
+		return c.Text("OK")
 	})
 
 	b := request("/ok", g)
@@ -152,7 +152,7 @@ func TestGigHandle(t *testing.T) {
 
 	g := New()
 	g.Handle("/", func(c Context) error {
-		return c.Text(StatusSuccess, "hello")
+		return c.Text("hello")
 	})
 
 	b := request("/", g)
@@ -192,7 +192,7 @@ func TestGigRoutes(t *testing.T) {
 
 	for _, r := range routes {
 		g.Handle(r.Path, func(c Context) error {
-			return c.Text(StatusSuccess, "OK")
+			return c.Text("OK")
 		})
 	}
 

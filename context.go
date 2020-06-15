@@ -55,23 +55,23 @@ type (
 		Set(key string, val interface{})
 
 		// Render renders a template with data and sends a text/gemini response with status
-		// code. Renderer must be registered using `Gig.Renderer`.
-		Render(code Status, name string, data interface{}) error
+		// code Success. Renderer must be registered using `Gig.Renderer`.
+		Render(name string, data interface{}) error
 
-		// Gemini sends a text/gemini response with status code.
-		Gemini(code Status, text string, args ...interface{}) error
+		// Gemini sends a text/gemini response with status code Success.
+		Gemini(text string, args ...interface{}) error
 
-		// GeminiBlob sends a text/gemini blob response with status code.
-		GeminiBlob(code Status, b []byte) error
+		// GeminiBlob sends a text/gemini blob response with status code Success.
+		GeminiBlob(b []byte) error
 
-		// Text sends a text/plain response with status code.
-		Text(code Status, format string, values ...interface{}) error
+		// Text sends a text/plain response with status code Success.
+		Text(format string, values ...interface{}) error
 
-		// Blob sends a blob response with status code and content type.
-		Blob(code Status, contentType string, b []byte) error
+		// Blob sends a blob response with status code Success and content type.
+		Blob(contentType string, b []byte) error
 
-		// Stream sends a streaming response with status code and content type.
-		Stream(code Status, contentType string, r io.Reader) error
+		// Stream sends a streaming response with status code Success and content type.
+		Stream(contentType string, r io.Reader) error
 
 		// File sends a response with the content of the file.
 		File(file string) error
@@ -173,32 +173,32 @@ func (c *context) Set(key string, val interface{}) {
 	c.store[key] = val
 }
 
-func (c *context) Render(code Status, name string, data interface{}) (err error) {
+func (c *context) Render(name string, data interface{}) (err error) {
 	if c.gig.Renderer == nil {
 		return ErrRendererNotRegistered
 	}
 
-	if err = c.response.WriteHeader(code, MIMETextGemini); err != nil {
+	if err = c.response.WriteHeader(StatusSuccess, MIMETextGemini); err != nil {
 		return
 	}
 
 	return c.gig.Renderer.Render(c.response, name, data, c)
 }
 
-func (c *context) Gemini(code Status, format string, values ...interface{}) error {
-	return c.GeminiBlob(code, []byte(fmt.Sprintf(format, values...)))
+func (c *context) Gemini(format string, values ...interface{}) error {
+	return c.GeminiBlob([]byte(fmt.Sprintf(format, values...)))
 }
 
-func (c *context) GeminiBlob(code Status, b []byte) (err error) {
-	return c.Blob(code, MIMETextGemini, b)
+func (c *context) GeminiBlob(b []byte) (err error) {
+	return c.Blob(MIMETextGemini, b)
 }
 
-func (c *context) Text(code Status, format string, values ...interface{}) (err error) {
-	return c.Blob(code, MIMETextPlain, []byte(fmt.Sprintf(format, values...)))
+func (c *context) Text(format string, values ...interface{}) (err error) {
+	return c.Blob(MIMETextPlain, []byte(fmt.Sprintf(format, values...)))
 }
 
-func (c *context) Blob(code Status, contentType string, b []byte) (err error) {
-	err = c.response.WriteHeader(code, contentType)
+func (c *context) Blob(contentType string, b []byte) (err error) {
+	err = c.response.WriteHeader(StatusSuccess, contentType)
 	if err != nil {
 		return
 	}
@@ -208,8 +208,8 @@ func (c *context) Blob(code Status, contentType string, b []byte) (err error) {
 	return
 }
 
-func (c *context) Stream(code Status, contentType string, r io.Reader) (err error) {
-	err = c.response.WriteHeader(code, contentType)
+func (c *context) Stream(contentType string, r io.Reader) (err error) {
+	err = c.response.WriteHeader(StatusSuccess, contentType)
 	if err != nil {
 		return
 	}

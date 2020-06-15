@@ -77,11 +77,11 @@ func TestGroupRouteMiddlewareWithMatchAny(t *testing.T) {
 	}
 	m2 := func(next HandlerFunc) HandlerFunc {
 		return func(c Context) error {
-			return c.Text(StatusSuccess, c.Path())
+			return c.Text(c.Path())
 		}
 	}
 	h := func(c Context) error {
-		return c.Text(StatusSuccess, c.Path())
+		return c.Text(c.Path())
 	}
 
 	g.Use(m1)

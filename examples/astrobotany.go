@@ -10,7 +10,7 @@ func main() {
 	plant := g.Group("/plant", gig.CertAuth(gig.ValidateHasCertificate))
 	{
 		plant.Handle("", func(c gig.Context) error {
-			return c.Gemini(gig.StatusSuccess, "Hello "+c.Get("subject").(string))
+			return c.Gemini("Hello " + c.Get("subject").(string))
 		})
 		plant.Handle("/water", func(c gig.Context) error {
 			return c.NoContent(gig.StatusRedirectTemporary, "/plant")

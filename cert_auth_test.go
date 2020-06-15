@@ -21,13 +21,13 @@ func TestCertAuth(t *testing.T) {
 		}
 
 		if cert.Subject.CommonName != "gig-tester" {
-			return ErrCertificateNotAccepted
+			return ErrCertificateNotValid
 		}
 
 		return nil
 	}
 	h := CertAuth(f)(func(c Context) error {
-		return c.Gemini(StatusSuccess, "test")
+		return c.Gemini("test")
 	})
 
 	// No certificate
@@ -39,7 +39,7 @@ func TestCertAuth(t *testing.T) {
 			{Subject: pkix.Name{CommonName: "wrong"}},
 		},
 	})
-	is.Equal(h(c), ErrCertificateNotAccepted)
+	is.Equal(h(c), ErrCertificateNotValid)
 
 	// Valid certificate
 	c, _ = g.NewFakeContext("/", &tls.ConnectionState{
@@ -64,23 +64,13 @@ func TestCertAuth_Validators(t *testing.T) {
 			expectedErr: ErrClientCertificateRequired,
 			name:        `ValidateHasCertificate`,
 		},
-		{
-			validator:   ValidateHasTransientCertificate,
-			expectedErr: ErrTransientCertificateRequested,
-			name:        `ValidateHasTransientCertificate`,
-		},
-		{
-			validator:   ValidateHasAuthorisedCertificate,
-			expectedErr: ErrAuthorisedCertificateRequired,
-			name:        `ValidateHasAuthorisedCertificate`,
-		},
 	}
 
 	for _, test := range testCases {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
 			h := CertAuth(test.validator)(func(c Context) error {
-				return c.Gemini(StatusSuccess, "test")
+				return c.Gemini("test")
 			})
 
 			// No certificate

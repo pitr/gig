@@ -38,30 +38,6 @@ func ValidateHasCertificate(cert *x509.Certificate, c Context) *GeminiError {
 	return nil
 }
 
-// ValidateHasTransientCertificate returns ErrTransientCertificateRequested if no certificate is sent.
-// It also stores subject name in context under "subject".
-func ValidateHasTransientCertificate(cert *x509.Certificate, c Context) *GeminiError {
-	if cert == nil {
-		return ErrTransientCertificateRequested
-	}
-
-	c.Set("subject", cert.Subject.CommonName)
-
-	return nil
-}
-
-// ValidateHasAuthorisedCertificate returns ErrAuthorisedCertificateRequired if no certificate is sent.
-// It also stores subject name in context under "subject".
-func ValidateHasAuthorisedCertificate(cert *x509.Certificate, c Context) *GeminiError {
-	if cert == nil {
-		return ErrAuthorisedCertificateRequired
-	}
-
-	c.Set("subject", cert.Subject.CommonName)
-
-	return nil
-}
-
 // CertAuth returns an CertAuth middleware.
 //
 // For valid credentials it calls the next handler.

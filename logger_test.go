@@ -20,7 +20,7 @@ func TestLogger(t *testing.T) {
 	c, _ := g.NewFakeContext("/", nil)
 
 	h := Logger()(func(c Context) error {
-		return c.Gemini(StatusSuccess, "test")
+		return c.Gemini("test")
 	})
 
 	// Status 2x
@@ -50,7 +50,7 @@ func TestLogger(t *testing.T) {
 	// Status 6x with empty path
 	c, _ = g.NewFakeContext("/", nil)
 	h = Logger()(func(c Context) error {
-		return c.NoContent(StatusTransientCertificateRequested, "test")
+		return c.NoContent(StatusClientCertificateRequired, "test")
 	})
 	is.NoErr(h(c))
 }
@@ -75,7 +75,7 @@ func TestLoggerTemplate(t *testing.T) {
 	}))
 
 	g.Handle("/login", func(c Context) error {
-		return c.Gemini(StatusSuccess, "Header Logged")
+		return c.Gemini("Header Logged")
 	})
 
 	c, _ := g.NewFakeContext("/login?username=apagano-param&password=secret", nil)
@@ -121,7 +121,7 @@ func TestLoggerCustomTimestamp(t *testing.T) {
 	}))
 
 	g.Handle("/", func(c Context) error {
-		return c.Gemini(StatusSuccess, "custom time stamp test")
+		return c.Gemini("custom time stamp test")
 	})
 
 	c, _ := g.NewFakeContext("/", nil)

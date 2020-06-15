@@ -53,29 +53,29 @@ func TestContext(t *testing.T) {
 	g.Renderer = &Template{
 		templates: template.Must(template.New("hello").Parse("Hello, {{.}}!")),
 	}
-	err := c.Render(StatusSuccess, "hello", "Jon Snow")
+	err := c.Render("hello", "Jon Snow")
 	is.NoErr(err)
 	is.Equal("20 text/gemini\r\nHello, Jon Snow!", conn.Written)
 
 	g.Renderer = &TemplateFail{}
-	err = c.Render(StatusSuccess, "hello", "Jon Snow")
+	err = c.Render("hello", "Jon Snow")
 	is.True(err != nil)
 
 	g.Renderer = nil
-	err = c.Render(StatusSuccess, "hello", "Jon Snow")
+	err = c.Render("hello", "Jon Snow")
 	is.True(err != nil)
 
 	// Text
 	c, conn = g.NewFakeContext("/", nil)
 
-	err = c.Text(StatusSuccess, "Hello, %s!", "World")
+	err = c.Text("Hello, %s!", "World")
 	is.NoErr(err)
 	is.Equal(fmt.Sprintf("%d %s\r\nHello, World!", StatusSuccess, MIMETextPlain), conn.Written)
 
 	// Gemini
 	c, conn = g.NewFakeContext("/", nil)
 
-	err = c.Gemini(StatusSuccess, "Hello, %s!", "World")
+	err = c.Gemini("Hello, %s!", "World")
 	is.NoErr(err)
 	is.Equal(fmt.Sprintf("%d %s\r\nHello, World!", StatusSuccess, MIMETextGemini), conn.Written)
 
@@ -83,14 +83,14 @@ func TestContext(t *testing.T) {
 	c, conn = g.NewFakeContext("/", nil)
 
 	r := strings.NewReader("response from a stream")
-	err = c.Stream(StatusSuccess, "application/octet-stream", r)
+	err = c.Stream("application/octet-stream", r)
 	is.NoErr(err)
 	is.Equal(fmt.Sprintf("%d application/octet-stream\r\nresponse from a stream", StatusSuccess), conn.Written)
 
 	c, conn = g.NewFakeContext("/", nil)
 	conn.FailAfter = 1
 
-	is.True(c.Stream(StatusSuccess, "application/octet-stream", r) != nil)
+	is.True(c.Stream("application/octet-stream", r) != nil)
 
 	// Error
 	c, conn = g.NewFakeContext("/", nil)

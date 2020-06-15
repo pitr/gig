@@ -8,6 +8,13 @@
 
 API is subject to change until v1.0
 
+## Protocol compatibility
+
+| Version | Supported Gemini version |
+| ------- | ------------------------ |
+| 0.9.4   | v0.14.0                  |
+| < 0.9.4 | v0.13.0                  |
+
 ## Contents
 
 * [Feature Overview](#feature-overview)
