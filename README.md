@@ -68,7 +68,7 @@ func main() {
 
   // Routes
   g.Handle("/", func(c gig.Context) error {
-    return c.Gemini(gig.StatusSuccess, "# Hello, World!")
+    return c.Gemini("# Hello, World!")
   })
 
   // Start server on PORT or default port
@@ -90,7 +90,7 @@ func main() {
   g := gig.Default()
 
   g.Handle("/user/:name", func(c gig.Context) error {
-    return c.Gemini(gig.StatusSuccess, "# Hello, %s!", c.Param("name"))
+    return c.Gemini("# Hello, %s!", c.Param("name"))
   })
 
   g.Run("my.crt", "my.key")
@@ -112,7 +112,7 @@ func main() {
     if err != nil {
       return err
     }
-    return c.Gemini(gig.StatusSuccess, "# Hello, %s!", query)
+    return c.Gemini("# Hello, %s!", query)
   })
 
   g.Run("my.crt", "my.key")
@@ -134,13 +134,13 @@ func main() {
     if cert == nil {
       return NewError(gig.StatusClientCertificateRequired, "We need a certificate")
     }
-    return c.Gemini(gig.StatusSuccess, "# Hello, %s!", cert.Subject.CommonName)
+    return c.Gemini("# Hello, %s!", cert.Subject.CommonName)
   })
 
   // OR
   g.Handle("/user", func(c gig.Context) error {
-    return c.Gemini(gig.StatusSuccess, "# Hello, %s!", c.Get("subject"))
-  }, gig.CertAuth(gig.ValidateHasAuthorisedCertificate))
+    return c.Gemini("# Hello, %s!", c.Get("subject"))
+  }, gig.CertAuth(gig.ValidateHasCertificate))
 
   g.Run("my.crt", "my.key")
 }
@@ -195,9 +195,9 @@ func main() {
   g.Use(gig.Recovery())
 
   // Private group
-  // same as private := g.Group("/private", gig.CertAuth(gig.ValidateHasAuthorisedCertificate))
+  // same as private := g.Group("/private", gig.CertAuth(gig.ValidateHasCertificate))
   private := g.Group("/private")
-  private.Use(gig.CertAuth(gig.ValidateHasAuthorisedCertificate))
+  private.Use(gig.CertAuth(gig.ValidateHasCertificate))
   {
     private.Handle("/user", userEndpoint)
   }
@@ -218,7 +218,7 @@ func main() {
   g := gig.Default()
 
   g.Handle("/", func(c gig.Context) error {
-      return c.Gemini(gig.StatusSuccess, "# Hello, World!")
+      return c.Gemini("# Hello, World!")
   })
 
   g.Run("my.crt", "my.key")
@@ -234,7 +234,7 @@ func main() {
   g.Use(gig.LoggerWithConfig(gig.LoggerConfig{Format: "${remote_ip} ${status}"}))
 
   g.Handle("/", func(c gig.Context) error {
-      return c.Gemini(gig.StatusSuccess, "# Hello, World!")
+      return c.Gemini("# Hello, World!")
   })
 
   g.Run("my.crt", "my.key")
@@ -277,7 +277,7 @@ func main() {
       return gig.ErrProxyError
     }
 
-    return c.Stream(gig.StatusSuccess, "text/html", response.Body)
+    return c.Stream("text/html", response.Body)
   })
 
   g.Run("my.crt", "my.key")
@@ -312,7 +312,7 @@ func main() {
   }
 
   g.Handle("/user/:name", func(c gig.Context) error {
-    return c.Render(gig.StatusSuccess, "user", c.Param("name"))
+    return c.Render("user", c.Param("name"))
   })
 
   g.Run("my.crt", "my.key")
@@ -357,7 +357,7 @@ func main() {
   g.Use(MyMiddleware)
 
   g.Handle("/", func(c gig.Context) error {
-    return c.Gemini(gig.StatusSuccess, "# Example %s", c.Get("example"))
+    return c.Gemini("# Example %s", c.Get("example"))
   })
 
   g.Run("my.crt", "my.key")
@@ -370,7 +370,7 @@ func main() {
   g := gig.Default()
 
   g.Handle("/", func(c gig.Context) error {
-    return c.Gemini(gig.StatusSuccess, "# Hello world")
+    return c.Gemini("# Hello world")
   })
 
   g.Run(":12345", "my.key")
@@ -384,7 +384,7 @@ func main() {
   g.TLSConfig.MinVersion = tls.VersionTLS13
 
   g.Handle("/", func(c gig.Context) error {
-    return c.Gemini(gig.StatusSuccess, "# Hello world")
+    return c.Gemini("# Hello world")
   })
 
   g.Run("my.crt", "my.key")
@@ -397,8 +397,8 @@ func setupServer() *gig.Gig {
   g := gig.Default()
 
   g.Handle("/private", func(c gig.Context) error {
-    return c.Gemini(gig.StatusSuccess, "Hello %s", c.Get("subject"))
-  }, gig.CertAuth(gig.ValidateHasAuthorisedCertificate))
+    return c.Gemini("Hello %s", c.Get("subject"))
+  }, gig.CertAuth(gig.ValidateHasCertificate))
 
   g.Run("my.crt", "my.key")
 }
