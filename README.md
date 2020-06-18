@@ -373,7 +373,7 @@ func main() {
     return c.Gemini("# Hello world")
   })
 
-  g.Run(":12345", "my.key")
+  g.Run(":12345", "my.crt", "my.key")
 }
 ```
 
