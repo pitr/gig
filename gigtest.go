@@ -69,5 +69,5 @@ func (g *Gig) NewFakeContext(uri string, tlsState *tls.ConnectionState) (Context
 
 	conn := &FakeConn{}
 
-	return g.NewContext(conn, u, uri, tlsState), conn
+	return g.newContext(conn, u, uri, tlsState), conn
 }

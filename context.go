@@ -220,6 +220,11 @@ func (c *context) Stream(contentType string, r io.Reader) (err error) {
 }
 
 func (c *context) File(file string) (err error) {
+	if containsDotDot(file) {
+		c.Error(ErrBadRequest)
+		return
+	}
+
 	s, err := os.Stat(file)
 	if err != nil {
 		c.Error(ErrNotFound)
@@ -250,7 +255,7 @@ func (c *context) File(file string) (err error) {
 			return err
 		}
 
-		_, _ = c.response.Write([]byte(fmt.Sprintf("# Listing %s\n\n", file)))
+		_, _ = c.response.Write([]byte(fmt.Sprintf("# Listing %s\n\n", c.u.Path)))
 
 		sort.Slice(files, func(i, j int) bool { return files[i].Name() < files[j].Name() })
 
@@ -263,7 +268,7 @@ func (c *context) File(file string) (err error) {
 				continue
 			}
 
-			_, _ = c.response.Write([]byte(fmt.Sprintf("=> %s %s [ %v ]\n", filepath.Clean(path.Join(c.path, file.Name())), file.Name(), bytefmt(file.Size()))))
+			_, _ = c.response.Write([]byte(fmt.Sprintf("=> %s %s [ %v ]\n", filepath.Clean(path.Join(c.u.Path, file.Name())), file.Name(), bytefmt(file.Size()))))
 		}
 
 		return nil
@@ -304,6 +309,22 @@ func (c *context) File(file string) (err error) {
 
 	return
 }
+
+func containsDotDot(v string) bool {
+	if !strings.Contains(v, "..") {
+		return false
+	}
+
+	for _, ent := range strings.FieldsFunc(v, isSlashRune) {
+		if ent == ".." {
+			return true
+		}
+	}
+
+	return false
+}
+
+func isSlashRune(r rune) bool { return r == '/' || r == '\\' }
 
 func (c *context) NoContent(code Status, meta string, values ...interface{}) error {
 	return c.response.WriteHeader(code, fmt.Sprintf(meta, values...))

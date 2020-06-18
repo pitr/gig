@@ -22,7 +22,8 @@ type (
 var (
 	// DefaultCertAuthConfig is the default CertAuth middleware config.
 	DefaultCertAuthConfig = CertAuthConfig{
-		Skipper: DefaultSkipper,
+		Skipper:   DefaultSkipper,
+		Validator: ValidateHasCertificate,
 	}
 )
 

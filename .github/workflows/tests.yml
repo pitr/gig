@@ -42,9 +42,9 @@ jobs:
 
       - name: Run Tests
         run: |
-          golint -set_exit_status ./...
-          go test --coverprofile=coverage.coverprofile --covermode=atomic ./...
-          go test -race ./...
+          go test --coverprofile=coverage.coverprofile --covermode=atomic .
+          go test -race .
+          golint -set_exit_status .
 
       - name: Upload coverage to Codecov
         if: success() && matrix.go == 1.13 && matrix.os == 'ubuntu-latest'

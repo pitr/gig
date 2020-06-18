@@ -37,7 +37,7 @@ func TestGigStatic(t *testing.T) {
 
 	// No file
 	g.Static("/images", "_fixture/scripts")
-	b = request("/images/bolt.png", g)
+	b = request("/images", g)
 	is.Equal("51 Not Found\r\n", b)
 
 	// Directory
@@ -46,22 +46,21 @@ func TestGigStatic(t *testing.T) {
 	is.Equal("51 Not Found\r\n", b)
 
 	// Directory with index.gmi
-	g.Static("/", "_fixture")
-	b = request("/", g)
+	g.Static("/d", "_fixture")
+	b = request("/d/", g)
 	is.Equal("20 text/gemini\r\n# Hello from gig\n\n=> / 🏠 Home\n", b)
 
 	// Sub-directory with index.gmi
-	b = request("/folder", g)
-	is.Equal("20 text/gemini\r\n# Listing _fixture/folder\n\n=> /*/about.gmi about.gmi [ 29B ]\n=> /*/another.blah another.blah [ 14B ]\n", b)
+	b = request("/d/folder", g)
+	is.Equal("20 text/gemini\r\n# Listing /d/folder\n\n=> /d/folder/about.gmi about.gmi [ 29B ]\n=> /d/folder/another.blah another.blah [ 14B ]\n", b)
 
 	// File without known mime
-	b = request("/folder/another.blah", g)
+	b = request("/d/folder/another.blah", g)
 	is.Equal("20 octet/stream\r\n# Another page", b)
 
 	// Escape
-	g.Static("/escape", "")
-	b = request("/escape/../../", g)
-	is.True(strings.Contains(b, "/escape/*/gig.go"))
+	b = request("/d/../../../../../../../../etc/profile", g)
+	is.Equal(b, "51 Not Found\r\n")
 }
 
 func TestGigFile(t *testing.T) {

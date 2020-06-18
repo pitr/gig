@@ -32,6 +32,22 @@ func TestNewFakeContext(t *testing.T) {
 	is.Equal(nil, conn.SetWriteDeadline(time.Now()))
 }
 
+func TestNewFakeContext_panic(t *testing.T) {
+	var (
+		is = is.New(t)
+		g  = New()
+	)
+
+	defer func() {
+		r := recover()
+		is.True(r != nil)
+	}()
+
+	_, _ = g.NewFakeContext(":", nil)
+
+	is.Fail()
+}
+
 func TestFakeAddr(t *testing.T) {
 	is := is.New(t)
 	addr := &FakeAddr{}

@@ -110,7 +110,7 @@ func TestContextPath(t *testing.T) {
 	r := g.router
 
 	r.add("/users/:id", nil)
-	c := g.NewContext(nil, nil, "", nil)
+	c := g.newContext(nil, nil, "", nil)
 	r.find("/users/1", c)
 
 	is := is.New(t)
@@ -118,7 +118,7 @@ func TestContextPath(t *testing.T) {
 	is.Equal("/users/:id", c.Path())
 
 	r.add("/users/:uid/files/:fid", nil)
-	c = g.NewContext(nil, nil, "", nil)
+	c = g.newContext(nil, nil, "", nil)
 	r.find("/users/1/files/1", c)
 	is.Equal("/users/:uid/files/:fid", c.Path())
 }
@@ -126,7 +126,7 @@ func TestContextPath(t *testing.T) {
 func TestContextRequestURI(t *testing.T) {
 	g := New()
 
-	c := g.NewContext(nil, nil, "/my-uri", nil)
+	c := g.newContext(nil, nil, "/my-uri", nil)
 
 	is := is.New(t)
 
@@ -147,6 +147,20 @@ func TestContextGetParam(t *testing.T) {
 
 	// shouldn't explode during Reset() afterwards!
 	c.(*context).reset(nil, nil, "", nil)
+}
+
+func TestContextFile(t *testing.T) {
+	g := New()
+	is := is.New(t)
+	c, conn := g.NewFakeContext("/", nil)
+
+	is.NoErr(c.File("_fixture/folder/about.gmi"))
+	is.Equal("20 text/gemini\r\n# About page\n\n=> / 🏠 Home\n", conn.Written)
+
+	c, conn = g.NewFakeContext("/", nil)
+
+	is.NoErr(c.File("../../../../../../../../etc/profile"))
+	is.Equal("59 Bad Request\r\n", conn.Written)
 }
 
 func TestContextNoContent(t *testing.T) {
@@ -193,7 +207,7 @@ func TestContextHandler(t *testing.T) {
 		return err
 	})
 
-	c := g.NewContext(nil, nil, "", nil)
+	c := g.newContext(nil, nil, "", nil)
 	r.find("/handler", c)
 	err := c.Handler()(c)
 
@@ -242,4 +256,10 @@ func TestContext_Certificate(t *testing.T) {
 	})
 
 	is.Equal(cert, c.Certificate())
+}
+
+func TestContext_bytefmt(t *testing.T) {
+	is := is.New(t)
+
+	is.Equal(bytefmt(12345678), "12.3MB")
 }

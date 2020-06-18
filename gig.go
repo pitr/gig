@@ -198,7 +198,7 @@ func New() *Gig {
 	}
 	g.GeminiErrorHandler = DefaultGeminiErrorHandler
 	g.pool.New = func() interface{} {
-		return g.NewContext(nil, nil, "", nil)
+		return g.newContext(nil, nil, "", nil)
 	}
 	g.router = newRouter(g)
 
@@ -215,8 +215,7 @@ func Default() *Gig {
 	return g
 }
 
-// NewContext returns a Context instance. Typically used for testing.
-func (g *Gig) NewContext(c net.Conn, u *url.URL, requestURI string, tls *tls.ConnectionState) Context {
+func (g *Gig) newContext(c net.Conn, u *url.URL, requestURI string, tls *tls.ConnectionState) Context {
 	return &context{
 		conn:       c,
 		TLS:        tls,

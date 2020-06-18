@@ -2,6 +2,7 @@ package gig
 
 import (
 	"io/ioutil"
+	"strings"
 	"testing"
 
 	"github.com/matryer/is"
@@ -21,6 +22,48 @@ func TestGroupFile(t *testing.T) {
 	c, conn := gig.NewFakeContext("/group/walle", nil)
 	gig.ServeGemini(c)
 	is.Equal("20 image/png\r\n"+string(expectedData), conn.Written)
+}
+
+func TestGroupStatic(t *testing.T) {
+	is := is.New(t)
+	gig := New()
+	g := gig.Group("/group")
+
+	// OK
+	g.Static("/images", "_fixture/images")
+
+	b := request("/group/images/walle.png", gig)
+	is.True(strings.HasPrefix(b, "20 image/png\r\n"))
+
+	// No file
+	g.Static("/images", "_fixture/scripts")
+
+	b = request("/group/images/bolt.png", gig)
+	is.Equal("51 Not Found\r\n", b)
+
+	// Directory
+	g.Static("/images", "_fixture/images")
+
+	b = request("/group/images", gig)
+	is.Equal("51 Not Found\r\n", b)
+
+	// Directory with index.gmi
+	g.Static("/d", "_fixture")
+
+	b = request("/group/d/", gig)
+	is.Equal("20 text/gemini\r\n# Hello from gig\n\n=> / 🏠 Home\n", b)
+
+	// Sub-directory with index.gmi
+	b = request("/group/d/folder", gig)
+	is.Equal("20 text/gemini\r\n# Listing /group/d/folder\n\n=> /group/d/folder/about.gmi about.gmi [ 29B ]\n=> /group/d/folder/another.blah another.blah [ 14B ]\n", b)
+
+	// File without known mime
+	b = request("/group/d/folder/another.blah", gig)
+	is.Equal("20 octet/stream\r\n# Another page", b)
+
+	// Escape
+	b = request("/d/../../../../../../../../etc/profile", gig)
+	is.Equal(b, "51 Not Found\r\n")
 }
 
 func TestGroupRouteMiddleware(t *testing.T) {
