@@ -1,7 +1,7 @@
 # Gig - Gemini framework
 
 [![Sourcegraph](https://sourcegraph.com/github.com/pitr/gig/-/badge.svg?style=flat-square)](https://sourcegraph.com/github.com/pitr/gig?badge)
-[![GoDoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](http://godoc.org/github.com/pitr/gig)
+[![GoDoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](https://pkg.go.dev/github.com/pitr/gig)
 [![Go Report Card](https://goreportcard.com/badge/github.com/pitr/gig?style=flat-square)](https://goreportcard.com/report/github.com/pitr/gig)
 [![Codecov](https://img.shields.io/codecov/c/github/pitr/gig.svg?style=flat-square)](https://codecov.io/gh/pitr/gig)
 [![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat-square)](https://raw.githubusercontent.com/pitr/gig/master/LICENSE)
@@ -12,8 +12,8 @@ API is subject to change until v1.0
 
 | Version | Supported Gemini version |
 | ------- | ------------------------ |
-| 0.9.4   | v0.14.0                  |
-| < 0.9.4 | v0.13.0                  |
+| 0.9.4   | v0.14.*                  |
+| < 0.9.4 | v0.13.*                  |
 
 ## Contents
 
@@ -33,6 +33,7 @@ API is subject to change until v1.0
    * [Serving data from reader](#serving-data-from-reader)
    * [Templates](#templates)
    * [Redirects](#redirects)
+   * [Subdomains](#subdomains)
    * [Custom middleware](#custom-middleware)
    * [Custom port](#custom-port)
    * [Custom TLS config](#custom-tls-config)
@@ -334,6 +335,44 @@ func main() {
 }
 ```
 
+### Subdomains
+
+```go
+func main() {
+  apps := map[string]*gig.Gig{}
+
+  // App A
+  a := gig.Default()
+  apps["app-a.example.com"] = a
+
+  a.Handle("/", func(c gig.Context) error {
+      return c.Gemini("I am App A")
+  })
+
+  // App B
+  b := gig.Default()
+  apps["app-b.example.com"] = b
+
+  b.Handle("/", func(c gig.Context) error {
+      return c.Gemini("I am App B")
+  })
+
+  // Server
+  g := gig.New()
+  g.Handle("/*", func(c gig.Context) error {
+      app := apps[c.URL().Host]
+
+      if app == nil {
+          return gig.ErrNotFound
+      } else {
+          return app.ServeGemini(c)
+      }
+  })
+
+  g.Run("my.crt", "my.key") // must be wildcard SSL certificate for *.example.com
+}
+```
+
 ### Custom middleware
 ```go
 func MyMiddleware(next gig.HandlerFunc) gig.HandlerFunc {
@@ -365,6 +404,15 @@ func main() {
 ```
 
 ### Custom port
+
+Use `PORT` environment variable:
+
+```
+PORT=12345 ./myapp
+```
+
+Alternatively, pass it to Run:
+
 ```go
 func main() {
   g := gig.Default()
