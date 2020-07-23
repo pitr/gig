@@ -34,6 +34,7 @@ API is subject to change until v1.0
    * [Templates](#templates)
    * [Redirects](#redirects)
    * [Subdomains](#subdomains)
+   * [Username/password authentication middleware](#usernamepassword-authentication-middleware)
    * [Custom middleware](#custom-middleware)
    * [Custom port](#custom-port)
    * [Custom TLS config](#custom-tls-config)
@@ -370,6 +371,34 @@ func main() {
   })
 
   g.Run("my.crt", "my.key") // must be wildcard SSL certificate for *.example.com
+}
+```
+
+### Username/password authentication middleware
+
+This assumes that there is a `db` module that does user management. Both `CertCheck` and `Login` functions in PassAuthConfig need to be specified. This middleware ensures that there is a client certificate, and validates its fingerprint using `CertCheck` function. If authentication is required, user is redirected to `/login` path, where their username and password are collected and passed to `Login` function. If credentials are correct, `Login` should return path to redirect to, otherwise - return an error.
+
+```go
+func main() {
+  g := Default()
+
+  secret := g.Group("/secret", PassAuth(PassAuthConfig{
+    CertCheck: func(sig string, c Context) (bool, error) {
+      return db.CheckValid(sig)
+    },
+    Login: func(user, pass, sig string, c Context) (string, error) {
+      // check user/pass combo, and activate cert signature if valid
+      err := db.Login(user, pass, sig)
+      if err != nil {
+        return "", err
+      }
+      return "/secret", nil
+    },
+  }))
+
+  // secret.Handle(...)
+
+  g.Run("my.crt", "my.key")
 }
 ```
 

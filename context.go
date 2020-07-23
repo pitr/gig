@@ -28,7 +28,7 @@ type (
 		// IP returns the client's network address.
 		IP() string
 
-		// Certificate returns client's certificate or nil if none provided
+		// Certificate returns client's leaf certificate or nil if none provided
 		Certificate() *x509.Certificate
 
 		// URL returns the URL for the context.
