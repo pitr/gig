@@ -45,7 +45,7 @@ API is subject to change until v1.0
 ## Feature Overview
 
 - Client certificate suppport (access `x509.Certificate` directly from context)
-- Optimized router which smartly prioritize routes
+- Highly optimized router with zero dynamic memory allocation which smartly prioritizes routes
 - Group APIs
 - Extensible middleware framework
 - Define middleware at root, group or route level
