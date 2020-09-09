@@ -61,3 +61,25 @@ func TestResponse_Write_UsesSetResponseCode(t *testing.T) {
 	is.NoErr(err)
 	is.Equal("42 text/gemini\r\ntest", conn.Written)
 }
+
+func TestResponse_Write_FailIfFailedBefore(t *testing.T) {
+	conn := &FakeConn{
+		FailAfter: 4,
+	}
+	res := &Response{Writer: conn}
+
+	is := is.New(t)
+
+	n, err := res.Write([]byte("test"))
+	is.True(err != nil)
+	is.Equal(n, 0)
+	is.Equal(res.err, err)
+	is.Equal("20 t", conn.Written)
+
+	_, err2 := res.Write([]byte("test"))
+	is.True(err2 != nil)
+	is.Equal(n, 0)
+	is.Equal(res.err, err)
+	is.Equal(err, err2)
+	is.Equal("20 t", conn.Written)
+}

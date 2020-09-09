@@ -13,6 +13,7 @@ type (
 		Meta      string
 		Size      int64
 		Committed bool
+		err       error
 	}
 )
 
@@ -33,31 +34,49 @@ func (r *Response) WriteHeader(code Status, meta string) error {
 
 	r.Status = code
 	r.Meta = meta
-	n, err := r.Writer.Write([]byte(fmt.Sprintf("%d %s\r\n", code, meta)))
+
+	var n int
+
+	n, r.err = r.Writer.Write([]byte(fmt.Sprintf("%d %s\r\n", code, meta)))
 	r.Committed = true
+
+	if r.err != nil {
+		return r.err
+	}
+
 	r.Size += int64(n)
 
-	return err
+	return nil
 }
 
 // Write writes the data to the connection as part of a reply.
-func (r *Response) Write(b []byte) (n int, err error) {
+func (r *Response) Write(b []byte) (int, error) {
+	if r.err != nil {
+		return 0, r.err
+	}
+
 	if !r.Committed {
 		if r.Status == 0 {
 			r.Status = StatusSuccess
 		}
 
-		err = r.WriteHeader(r.Status, "text/gemini")
+		r.err = r.WriteHeader(r.Status, "text/gemini")
 
-		if err != nil {
-			return
+		if r.err != nil {
+			return 0, r.err
 		}
 	}
 
-	n, err = r.Writer.Write(b)
+	var n int
+	n, r.err = r.Writer.Write(b)
+
+	if r.err != nil {
+		return n, r.err
+	}
+
 	r.Size += int64(n)
 
-	return
+	return n, nil
 }
 
 func (r *Response) reset(w io.Writer) {
@@ -66,4 +85,5 @@ func (r *Response) reset(w io.Writer) {
 	r.Meta = ""
 	r.Status = StatusSuccess
 	r.Committed = false
+	r.err = nil
 }
