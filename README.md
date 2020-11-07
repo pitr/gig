@@ -383,7 +383,14 @@ func main() {
   g := Default()
 
   secret := g.Group("/secret", gig.PassAuth(func(sig string, c gig.Context) (string, error) {
-    return "/login", db.CheckValid(sig)
+    ok, err := db.CheckValid(sig)
+    if err != nil {
+      return "/login", err
+    }
+    if !ok {
+      return "/login", nil
+    }
+    return "", nil
   }))
   // secret.Handle("/page", func(c gig.Context) {...})
 
