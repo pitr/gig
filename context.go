@@ -1,6 +1,7 @@
 package gig
 
 import (
+	"crypto/md5"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -30,6 +31,9 @@ type (
 
 		// Certificate returns client's leaf certificate or nil if none provided
 		Certificate() *x509.Certificate
+
+		// CertHash returns a hash of client's leaf certificate or empty string is none
+		CertHash() string
 
 		// URL returns the URL for the context.
 		URL() *url.URL
@@ -125,6 +129,15 @@ func (c *context) Certificate() *x509.Certificate {
 	}
 
 	return c.TLS.PeerCertificates[0]
+}
+
+func (c *context) CertHash() string {
+	cert := c.Certificate()
+	if cert == nil {
+		return ""
+	}
+
+	return fmt.Sprintf("%x", md5.Sum(cert.Raw))
 }
 
 func (c *context) URL() *url.URL {

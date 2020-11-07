@@ -1,122 +1,95 @@
 package gig
 
-import (
-	"crypto/md5"
-	"fmt"
-	"strings"
-)
-
 type (
-	// PassAuthConfig defines the config for PassAuth middleware.
-	PassAuthConfig struct {
-		// Skipper defines a function to skip middleware.
-		Skipper Skipper
-
-		// CertCheck is a function to validate client certificate.
-		// Required.
-		CertCheck PassAuthCertCheck
-
-		// Login is a function to login the user, should check credentials and
-		// return path where to redirect user to, or return an error if
-		// credentials are incorrect.
-		Login PassAuthLogin
-	}
-
 	// PassAuthCertCheck defines a function to validate certificate fingerprint.
-	PassAuthCertCheck func(string, Context) (bool, error)
+	// Must return path on unsuccessful login.
+	PassAuthCertCheck func(string, Context) (string, error)
 	// PassAuthLogin defines a function to login user.
-	PassAuthLogin func(string, string, string, Context) (string, error)
+	// It may pin certificate to user if login is successful.
+	// Must return path to redirect to after login.
+	PassAuthLogin func(username, password, sig string, c Context) (string, error)
 )
 
 // PassAuth is a middleware that implements username/password authentication
 // by first requiring a certificate, checking username/password using PassAuthValidator,
-// and then pinning certificate to .
+// and then pinning certificate to it.
 //
 // For valid credentials it calls the next handler.
-func PassAuth(config PassAuthConfig) MiddlewareFunc {
-	// Defaults
-	if config.CertCheck == nil {
-		panic("PassAuthCertCheck must be set")
-	}
-
-	if config.Login == nil {
-		panic("PassAuthLogin must be set")
-	}
-
-	if config.Skipper == nil {
-		config.Skipper = DefaultSkipper
-	}
-
+func PassAuth(check PassAuthCertCheck) MiddlewareFunc {
 	return func(next HandlerFunc) HandlerFunc {
 		return func(c Context) error {
-			if config.Skipper(c) {
-				return next(c)
-			}
-
 			// If no client certificate is sent, request it
-			cert := c.Certificate()
-			if cert == nil {
+			var sig = c.CertHash()
+			if sig == "" {
 				return c.NoContent(StatusClientCertificateRequired, "Please create a certificate")
 			}
 
-			var (
-				sig  = fmt.Sprintf("%x", md5.Sum(cert.Raw))
-				path = c.URL().Path
-			)
-
-			// Handle asking for username
-			if path == "/login" {
-				username, err := c.QueryString()
-				if err != nil {
-					debugPrintf("could not extract username from URL: %s", err)
-					return c.NoContent(StatusBadRequest, "Invalid username received")
-				}
-
-				if username == "" {
-					return c.NoContent(StatusInput, "Enter username")
-				}
-
-				return c.NoContent(StatusRedirectTemporary, "/login/%s", username)
-			}
-
-			// Handle asking for password
-			if strings.HasPrefix(path, "/login/") {
-				username := strings.TrimSpace(strings.TrimPrefix(path, "/login/"))
-				if username == "" {
-					return c.NoContent(StatusRedirectTemporary, "/login")
-				}
-
-				password, err := c.QueryString()
-
-				if err != nil {
-					debugPrintf("could not extract password from URL: %s", err)
-					return c.NoContent(StatusBadRequest, "Invalid password received")
-				}
-
-				if password == "" {
-					return c.NoContent(StatusSensitiveInput, "Enter password")
-				}
-
-				path, err := config.Login(username, password, sig, c)
-
-				if err != nil {
-					return err
-				}
-
-				return c.NoContent(StatusRedirectTemporary, path)
-			}
-
-			ok, err := config.CertCheck(sig, c)
+			to, err := check(sig, c)
 			if err != nil {
 				debugPrintf("could not check certificate: %s", err)
 				return c.NoContent(StatusBadRequest, "Try again later")
 			}
 
-			if !ok {
-				return c.NoContent(StatusRedirectTemporary, "/login")
+			if to != "" {
+				return c.NoContent(StatusRedirectTemporary, to)
 			}
 
 			return next(c)
 		}
 	}
+}
+
+// PassAuthLoginHandle sets up handlers to check username/password using PassAuthLogin.
+func (g *Gig) PassAuthLoginHandle(path string, fn PassAuthLogin) {
+	g.Handle(path, func(c Context) error {
+		cert := c.Certificate()
+		if cert == nil {
+			return c.NoContent(StatusClientCertificateRequired, "Please create a certificate")
+		}
+		username, err := c.QueryString()
+		if err != nil {
+			debugPrintf("could not extract username from URL: %s", err)
+			return c.NoContent(StatusBadRequest, "Invalid username received")
+		}
+
+		if username == "" {
+			return c.NoContent(StatusInput, "Enter username")
+		}
+
+		return c.NoContent(StatusRedirectTemporary, "%s/%s", path, username)
+	})
+
+	g.Handle(path+"/:username", func(c Context) error {
+		var (
+			username = c.Param("username")
+			sig      = c.CertHash()
+		)
+
+		if sig == "" {
+			return c.NoContent(StatusClientCertificateRequired, "Please create a certificate")
+		}
+
+		if username == "" {
+			return c.NoContent(StatusRedirectTemporary, path)
+		}
+
+		password, err := c.QueryString()
+
+		if err != nil {
+			debugPrintf("could not extract password from URL: %s", err)
+			return c.NoContent(StatusBadRequest, "Invalid password received")
+		}
+
+		if password == "" {
+			return c.NoContent(StatusSensitiveInput, "Enter password")
+		}
+
+		to, err := fn(username, password, sig, c)
+
+		if err != nil {
+			return err
+		}
+
+		return c.NoContent(StatusRedirectTemporary, to)
+	})
 }

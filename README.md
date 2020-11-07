@@ -376,27 +376,25 @@ func main() {
 
 ### Username/password authentication middleware
 
-This assumes that there is a `db` module that does user management. Both `CertCheck` and `Login` functions in PassAuthConfig need to be specified. This middleware ensures that there is a client certificate, and validates its fingerprint using `CertCheck` function. If authentication is required, user is redirected to `/login` path, where their username and password are collected and passed to `Login` function. If credentials are correct, `Login` should return path to redirect to, otherwise - return an error.
+This assumes that there is a `db` module that does user management. This middleware ensures that there is a client certificate and validates its fingerprint using passed function. If authentication is required, user is redirected to path returned by middleware. Login handlers are setup using `PassAuthLoginHandle` function, which collectss username and password and pass to provided function. That function should return an error if login failed, or absolute path to redirect user to.
 
 ```go
 func main() {
   g := Default()
 
-  secret := g.Group("/secret", PassAuth(PassAuthConfig{
-    CertCheck: func(sig string, c Context) (bool, error) {
-      return db.CheckValid(sig)
-    },
-    Login: func(user, pass, sig string, c Context) (string, error) {
-      // check user/pass combo, and activate cert signature if valid
-      err := db.Login(user, pass, sig)
-      if err != nil {
-        return "", err
-      }
-      return "/secret", nil
-    },
+  secret := g.Group("/secret", gig.PassAuth(func(sig string, c gig.Context) (string, error) {
+    return "/login", db.CheckValid(sig)
   }))
+  // secret.Handle("/page", func(c gig.Context) {...})
 
-  // secret.Handle(...)
+  g.PassAuthLoginHandle("/login", func(user, pass, sig string, c Context) (string, error) {
+    // check user/pass combo, and activate cert signature if valid
+    err := db.Login(user, pass, sig)
+    if err != nil {
+      return "", err
+    }
+    return "/secret/page", nil
+  })
 
   g.Run("my.crt", "my.key")
 }
@@ -477,7 +475,7 @@ func setupServer() *gig.Gig {
     return c.Gemini("Hello %s", c.Get("subject"))
   }, gig.CertAuth(gig.ValidateHasCertificate))
 
-  g.Run("my.crt", "my.key")
+  return g
 }
 
 func TestServer(t *testing.T) {
