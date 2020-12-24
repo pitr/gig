@@ -528,6 +528,10 @@ func (g *Gig) handleRequest(conn *tls.Conn) {
 
 		return
 	} else if err != nil {
+		if err == io.EOF {
+			debugPrintf("gemini: EOF reading from client, read %d bytes", len(request))
+			return
+		}
 		debugPrintf("gemini: %s", err)
 
 		_, _ = conn.Write([]byte(fmt.Sprintf("%d %s\r\n", StatusBadRequest, "Unknown error reading request!")))
@@ -535,8 +539,8 @@ func (g *Gig) handleRequest(conn *tls.Conn) {
 		return
 	}
 
-	RequestURI := string(request)
-	URL, err := url.Parse(RequestURI)
+	header := string(request)
+	URL, err := url.Parse(header)
 
 	if err != nil {
 		debugPrintf("gemini: %s", err)
@@ -551,7 +555,7 @@ func (g *Gig) handleRequest(conn *tls.Conn) {
 	}
 
 	if URL.Scheme != "gemini" {
-		debugPrintf("gemini: non-gemini scheme: %s", RequestURI)
+		debugPrintf("gemini: non-gemini scheme: %s", header)
 
 		_, _ = conn.Write([]byte(fmt.Sprintf("%d %s\r\n", StatusBadRequest, "No proxying to non-Gemini content!")))
 
@@ -570,7 +574,7 @@ func (g *Gig) handleRequest(conn *tls.Conn) {
 
 	// Acquire context
 	c := g.pool.Get().(*context)
-	c.reset(conn, URL, RequestURI, tlsState)
+	c.reset(conn, URL, header, tlsState)
 
 	g.ServeGemini(c)
 
