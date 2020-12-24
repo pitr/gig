@@ -28,7 +28,7 @@ func NewResponse(w io.Writer) (r *Response) {
 // are mainly used to send error codes.
 func (r *Response) WriteHeader(code Status, meta string) error {
 	if r.Committed {
-		debugPrintf("response already committed")
+		debugPrintf("gemini: response already committed")
 		return nil
 	}
 

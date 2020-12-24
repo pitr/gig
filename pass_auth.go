@@ -26,7 +26,7 @@ func PassAuth(check PassAuthCertCheck) MiddlewareFunc {
 
 			to, err := check(sig, c)
 			if err != nil {
-				debugPrintf("could not check certificate: %s", err)
+				debugPrintf("gemini: could not check certificate: %s", err)
 				return c.NoContent(StatusBadRequest, "Try again later")
 			}
 
@@ -48,7 +48,7 @@ func (g *Gig) PassAuthLoginHandle(path string, fn PassAuthLogin) {
 		}
 		username, err := c.QueryString()
 		if err != nil {
-			debugPrintf("could not extract username from URL: %s", err)
+			debugPrintf("gemini: could not extract username from URL: %s", err)
 			return c.NoContent(StatusBadRequest, "Invalid username received")
 		}
 
@@ -76,7 +76,7 @@ func (g *Gig) PassAuthLoginHandle(path string, fn PassAuthLogin) {
 		password, err := c.QueryString()
 
 		if err != nil {
-			debugPrintf("could not extract password from URL: %s", err)
+			debugPrintf("gemini: could not extract password from URL: %s", err)
 			return c.NoContent(StatusBadRequest, "Invalid password received")
 		}
 

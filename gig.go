@@ -175,13 +175,13 @@ func DefaultGeminiErrorHandler(err error, c Context) {
 	code := he.Code
 	message := he.Message
 
-	debugPrintf("%s", err)
+	debugPrintf("gemini: handling error: %s", err)
 
 	// Send response
 	if !c.Response().Committed {
 		err = c.NoContent(code, message)
 		if err != nil {
-			debugPrintf("%s", err)
+			debugPrintf("gemini: could not handle error: %s", err)
 		}
 	}
 }
@@ -514,7 +514,7 @@ func (g *Gig) handleRequest(conn *tls.Conn) {
 	if d := g.ReadTimeout; d != 0 {
 		err := conn.SetReadDeadline(time.Now().Add(d))
 		if err != nil {
-			debugPrintf("%s", err)
+			debugPrintf("gemini: could not set socket read timeout: %s", err)
 		}
 	}
 
@@ -532,7 +532,7 @@ func (g *Gig) handleRequest(conn *tls.Conn) {
 			debugPrintf("gemini: EOF reading from client, read %d bytes", len(request))
 			return
 		}
-		debugPrintf("gemini: %s", err)
+		debugPrintf("gemini: unknown error reading request header: %s", err)
 
 		_, _ = conn.Write([]byte(fmt.Sprintf("%d %s\r\n", StatusBadRequest, "Unknown error reading request!")))
 
@@ -543,7 +543,7 @@ func (g *Gig) handleRequest(conn *tls.Conn) {
 	URL, err := url.Parse(header)
 
 	if err != nil {
-		debugPrintf("gemini: %s", err)
+		debugPrintf("gemini: invalid request url: %s", err)
 
 		_, _ = conn.Write([]byte(fmt.Sprintf("%d %s\r\n", StatusBadRequest, "Error parsing URL!")))
 
@@ -565,7 +565,7 @@ func (g *Gig) handleRequest(conn *tls.Conn) {
 	if d := g.WriteTimeout; d != 0 {
 		err := conn.SetWriteDeadline(time.Now().Add(d))
 		if err != nil {
-			debugPrintf("%s", err)
+			debugPrintf("gemini: could not set socket write timeout: %s", err)
 		}
 	}
 
