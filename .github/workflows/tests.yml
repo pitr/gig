@@ -2,53 +2,40 @@ name: Run Tests
 
 on:
   push:
-    branches:
-      - master
+    branches: [ master ]
   pull_request:
-    branches:
-      - master
-
-env:
-  GO111MODULE: on
-  GOPROXY: https://proxy.golang.org
+    branches: [ master ]
 
 jobs:
-  test:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-        go: [1.13, 1.14]
-    name: ${{ matrix.os }} @ Go ${{ matrix.go }}
-    runs-on: ${{ matrix.os }}
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
     steps:
-      - name: Set up Go ${{ matrix.go }}
-        uses: actions/setup-go@v1
-        with:
-          go-version: ${{ matrix.go }}
 
-      - name: Set GOPATH and PATH
-        run: |
-          echo "::set-env name=GOPATH::$(dirname $GITHUB_WORKSPACE)"
-          echo "::add-path::$(dirname $GITHUB_WORKSPACE)/bin"
-        shell: bash
+    - name: Set up Go 1.x
+      uses: actions/setup-go@v2
+      with:
+        go-version: ^1.13
 
-      - name: Checkout Code
-        uses: actions/checkout@v1
-        with:
-          ref: ${{ github.ref }}
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
 
-      - name: Install Dependencies
-        run: go get -v golang.org/x/lint/golint
+    - name: Get dependencies
+      run: |
+        go get -v -t -d ./...
 
-      - name: Run Tests
-        run: |
+    - name: Install Dependencies
+      run: go get -v golang.org/x/lint/golint
+
+    - name: Build
+      run: go build -v ./...
+
+    - name: Test
+      run: |
           go test --coverprofile=coverage.coverprofile --covermode=atomic .
           go test -race .
           golint -set_exit_status .
 
-      - name: Upload coverage to Codecov
-        if: success() && matrix.go == 1.13 && matrix.os == 'ubuntu-latest'
-        uses: codecov/codecov-action@v1
-        with:
-          token:
-          fail_ci_if_error: false
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1.1.1
