@@ -298,6 +298,24 @@ func TestGigNotFound(t *testing.T) {
 	is.Equal("51 Not Found\r\n", conn.Written)
 }
 
+func TestGigServeGemini(t *testing.T) {
+	var (
+		is        = is.New(t)
+		g1        = New()
+		g2        = New()
+		ctx, conn = g1.NewFakeContext("/files", nil)
+	)
+
+	g2.Handle("/", func(c Context) error {
+		is.True(c.Gig() == g2)
+		is.True(c != ctx)
+		return c.NoContent(StatusSuccess, "ok")
+	})
+
+	g2.ServeGemini(ctx)
+	is.Equal("51 Not Found\r\n", conn.Written)
+}
+
 func TestGigRun(t *testing.T) {
 	g := New()
 
