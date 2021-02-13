@@ -120,7 +120,7 @@ const (
 
 const (
 	// Version of Gig.
-	Version = "0.9.7"
+	Version = "0.9.8"
 	// http://patorjk.com/software/taag/#p=display&f=Small%20Slant&t=gig
 	banner = `
         _
