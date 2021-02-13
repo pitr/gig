@@ -366,9 +366,10 @@ func main() {
 
       if app == nil {
           return gig.ErrNotFound
-      } else {
-          return app.ServeGemini(c)
       }
+
+      app.ServeGemini(c)
+      return nil
   })
 
   g.Run("my.crt", "my.key") // must be wildcard SSL certificate for *.example.com

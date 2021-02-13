@@ -119,7 +119,7 @@ const (
 )
 
 const (
-	// Version of Gig
+	// Version of Gig.
 	Version = "0.9.7"
 	// http://patorjk.com/software/taag/#p=display&f=Small%20Slant&t=gig
 	banner = `
@@ -362,6 +362,18 @@ func (g *Gig) Routes() []*Route {
 
 // ServeGemini serves Gemini request.
 func (g *Gig) ServeGemini(c Context) {
+	if c.Gig() != g {
+		// Acquire context from correct Gig and use it instead.
+		orig := c.(*context)
+
+		ctx := g.pool.Get().(*context)
+		defer g.pool.Put(ctx)
+
+		ctx.reset(orig.conn, orig.u, orig.requestURI, orig.TLS)
+
+		c = ctx
+	}
+
 	var h HandlerFunc
 
 	URL := c.URL()
