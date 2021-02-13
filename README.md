@@ -1,6 +1,6 @@
 # Gig - Gemini framework
 
-[![Sourcegraph](https://sourcegraph.com/github.com/pitr/gig/-/badge.svg?style=flat-square)](https://sourcegraph.com/github.com/pitr/gig?badge)
+[![Used By](https://img.shields.io/badge/used%20by-5%2B%20projects-brightgreen)](#who-uses-gig)
 [![godocs.io](https://godocs.io/github.com/pitr/gig?status.svg)](https://godocs.io/github.com/pitr/gig)
 [![GoDoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](https://pkg.go.dev/github.com/pitr/gig)
 [![Go Report Card](https://goreportcard.com/badge/github.com/pitr/gig?style=flat-square)](https://goreportcard.com/report/github.com/pitr/gig)
@@ -40,6 +40,7 @@ API is subject to change until v1.0
    * [Custom port](#custom-port)
    * [Custom TLS config](#custom-tls-config)
    * [Testing](#testing)
+* [Who uses Gig](#who-uses-gig)
 * [Contribute](#contribute)
 * [License](#license)
 
@@ -513,6 +514,19 @@ func TestCertificate(t *testing.T) {
   }
 }
 ```
+
+## Who uses Gig
+
+Gig is used by the following capsules:
+
+- [gemif.fedi.farm](https://portal.mozz.us/gemini/gemif.fedi.farm) - GemIf, Interactive Fiction engine
+- [geddit.glv.one](https://portal.mozz.us/gemini/geddit.glv.one) - Link aggregator
+- [wp.glv.one](https://portal.mozz.us/gemini/wp.glv.one) - Wikipedia proxy
+- [egsam.glv.one](https://portal.mozz.us/gemini/egsam.glv.one) - Egsam, client torture test
+- [paste.gemigrep.com](https://portal.mozz.us/gemini/paste.gemigrep.com) - Paste service
+- [gemini.tunerapp.org](https://portal.mozz.us/gemini/gemini.tunerapp.org) - Internet Radio Stations Directory
+
+If you use Gig, open a PR to add your capsule to this list.
 
 ## Contribute
 
