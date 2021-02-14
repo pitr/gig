@@ -395,7 +395,7 @@ The example assumes that there is a `db` module that does user management.
 
 ```go
 func main() {
-  g := Default()
+  g := gig.Default()
 
   secret := g.Group("/secret", gig.PassAuth(func(sig string, c gig.Context) (string, error) {
     ok, err := db.CheckValid(sig)
