@@ -41,6 +41,7 @@ API is subject to change until v1.0
    * [Custom TLS config](#custom-tls-config)
    * [Testing](#testing)
 * [Who uses Gig](#who-uses-gig)
+* [Benchmarks](#benchmarks)
 * [Contribute](#contribute)
 * [License](#license)
 
@@ -538,6 +539,23 @@ Gig is used by the following capsules:
 - [gemini.tunerapp.org](https://portal.mozz.us/gemini/gemini.tunerapp.org) - Internet Radio Stations Directory
 
 If you use Gig, open a PR to add your capsule to this list.
+
+## Benchmarks
+
+| Benchmark name                 |      (1) |           (2) |        (3) |            (4) |
+| ------------------------------ | --------:| -------------:| ----------:| --------------:|
+| BenchmarkRouterStaticRoutes    |   104677 |   11105 ns/op |     0 B/op |    0 allocs/op |
+| BenchmarkRouterGitHubAPI       |    50859 |   22973 ns/op |     0 B/op |    0 allocs/op |
+| BenchmarkRouterParseAPI        |   302828 |    3717 ns/op |     0 B/op |    0 allocs/op |
+| BenchmarkRouterGooglePlusAPI   |   185558 |    6136 ns/op |     0 B/op |    0 allocs/op |
+
+Generated using `make bench` in [router_test.go](https://github.com/pitr/gig/blob/master/router_test.go). APIs are based on [Go HTTP Router Benchmark repository](https://github.com/gin-gonic/go-http-routing-benchmark) and adapted to Gemini protocol, eg. verbs
+GET/POST/etc are ignored since Gemini does not support them.
+
+- (1): Total Repetitions achieved in constant time, higher means more confident result
+- (2): Single Repetition Duration (ns/op), lower is better
+- (3): Heap Memory (B/op), lower is better
+- (4): Average Allocations per Repetition (allocs/op), lower is better
 
 ## Contribute
 
