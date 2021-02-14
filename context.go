@@ -41,8 +41,8 @@ type (
 		// Path returns the registered path for the handler.
 		Path() string
 
-		// QueryString returns unescaped URL query string or error. Use
-		// Context#URL().RawQuery to get raw query string
+		// QueryString returns unescaped URL query string or error if the raw query
+		// could not be unescaped. Use Context#URL().RawQuery to get raw query string.
 		QueryString() (string, error)
 
 		// RequestURI is the unmodified URL string as sent by the client

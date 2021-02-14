@@ -136,12 +136,13 @@ func main() {
   g.Handle("/user", func(c gig.Context) error {
     cert := c.Certificate()
     if cert == nil {
-      return NewError(gig.StatusClientCertificateRequired, "We need a certificate")
+      return c.NoContent(gig.StatusClientCertificateRequired, "We need a certificate")
     }
     return c.Gemini("# Hello, %s!", cert.Subject.CommonName)
   })
 
-  // OR
+  // OR using middleware
+
   g.Handle("/user", func(c gig.Context) error {
     return c.Gemini("# Hello, %s!", c.Get("subject"))
   }, gig.CertAuth(gig.ValidateHasCertificate))
@@ -234,7 +235,7 @@ func main() {
 func main() {
   g := gig.New()
 
-  // See LoggerConfig documentation for more
+  // See LoggerConfig documentation for format
   g.Use(gig.LoggerWithConfig(gig.LoggerConfig{Format: "${remote_ip} ${status}"}))
 
   g.Handle("/", func(c gig.Context) error {
@@ -278,7 +279,7 @@ func main() {
   g.Handle("/data", func(c gig.Context) error {
     response, err := http.Get("https://google.com/")
     if err != nil || response.StatusCode != http.StatusOK {
-      return gig.ErrProxyError
+      return c.NoContent(gig.StatusProxyError, "could not fetch google")
     }
 
     return c.Stream("text/html", response.Body)
@@ -290,7 +291,9 @@ func main() {
 
 ### Templates
 
-Use `text/template`, [https://github.com/valyala/quicktemplate](https://github.com/valyala/quicktemplate), or anything else. This example uses `text/template`
+Set `Gig.Renderer` to something that responds to `Render(io.Writer, string, interface{}, gig.Context) error`.
+
+Use any templating library, such as `text/template`, [https://github.com/valyala/quicktemplate](https://github.com/valyala/quicktemplate), etc. The following example uses `text/template`:
 
 ```go
 import (
@@ -300,22 +303,22 @@ import (
 )
 
 type Template struct {
-    templates *template.Template
+  templates *template.Template
 }
 
 func (t *Template) Render(w io.Writer, name string, data interface{}, c gig.Context) error {
-    return t.templates.ExecuteTemplate(w, name, data)
+  // Execute named template with data
+  return t.templates.ExecuteTemplate(w, name, data)
 }
 
 func main() {
   g := gig.Default()
 
   // Register renderer
-  g.Renderer = &Template{
-    templates: template.Must(template.ParseGlob("public/views/*.gmi")),
-  }
+  g.Renderer = &Template{template.Must(template.ParseGlob("public/views/*.gmi"))}
 
   g.Handle("/user/:name", func(c gig.Context) error {
+    // Render template "user" with username passed as data.
     return c.Render("user", c.Param("name"))
   })
 
@@ -323,7 +326,7 @@ func main() {
 }
 ```
 
-Consider bundling assets with the binary by using [go-assets](https://github.com/jessevdk/go-assets) or similar.
+Consider bundling assets with the binary by using [go:ember](https://tip.golang.org/pkg/embed/), [go-assets](https://github.com/jessevdk/go-assets) or similar.
 
 ### Redirects
 ```go
@@ -360,7 +363,7 @@ func main() {
       return c.Gemini("I am App B")
   })
 
-  // Server
+  // Server (without default middleware to prevent double logging)
   g := gig.New()
   g.Handle("/*", func(c gig.Context) error {
       app := apps[c.URL().Host]
@@ -379,7 +382,15 @@ func main() {
 
 ### Username/password authentication middleware
 
-This assumes that there is a `db` module that does user management. This middleware ensures that there is a client certificate and validates its fingerprint using passed function. If authentication is required, user is redirected to path returned by middleware. Login handlers are setup using `PassAuthLoginHandle` function, which collectss username and password and pass to provided function. That function should return an error if login failed, or absolute path to redirect user to.
+Status: EXPERIMENTAL
+
+`PassAuth` middleware ensures that request has a client certificate, validates its fingerprint using function passed to middleware. If authentication is required, this function should return a path where user should be redirect to.
+
+Login handlers are setup using `PassAuthLoginHandle` function, which collects username and password, and passes them to the provided function. That function should return an error if login failed, or absolute path to redirect user to.
+
+User registration is expected to be implemented by developer.
+
+The example assumes that there is a `db` module that does user management.
 
 ```go
 func main() {
