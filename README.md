@@ -537,6 +537,7 @@ Gig is used by the following capsules:
 - [egsam.glv.one](https://portal.mozz.us/gemini/egsam.glv.one) - Egsam, client torture test
 - [paste.gemigrep.com](https://portal.mozz.us/gemini/paste.gemigrep.com) - Paste service
 - [gemini.tunerapp.org](https://portal.mozz.us/gemini/gemini.tunerapp.org) - Internet Radio Stations Directory
+- [pon.ix.tc](https://portal.mozz.us/gemini/pon.ix.tc) - YouTube Proxy and other utiltiies
 
 If you use Gig, open a PR to add your capsule to this list.
 
