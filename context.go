@@ -95,7 +95,7 @@ type (
 	}
 
 	context struct {
-		conn       net.Conn
+		conn       tlsconn
 		TLS        *tls.ConnectionState
 		u          *url.URL
 		response   *Response
@@ -355,7 +355,7 @@ func (c *context) Handler() HandlerFunc {
 	return c.handler
 }
 
-func (c *context) reset(conn net.Conn, u *url.URL, requestURI string, tls *tls.ConnectionState) {
+func (c *context) reset(conn tlsconn, u *url.URL, requestURI string, tls *tls.ConnectionState) {
 	c.conn = conn
 	c.TLS = tls
 	c.u = u

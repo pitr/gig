@@ -2,8 +2,10 @@ package gig
 
 import (
 	"bytes"
+	"crypto/tls"
 	"errors"
 	"io/ioutil"
+	"net"
 	"strings"
 	"testing"
 	"time"
@@ -457,4 +459,53 @@ func TestGigClose(t *testing.T) {
 
 	err := <-errCh
 	is.Equal(err.Error(), "gemini: Server closed")
+}
+
+type (
+	fastFakeConn struct{}
+)
+
+func (*fastFakeConn) Close() error                         { return nil }
+func (*fastFakeConn) Read(b []byte) (int, error)           { return copy(b, "gemini://127.0.0.1/\r\n"), nil }
+func (*fastFakeConn) Write(b []byte) (n int, err error)    { return len(b), nil }
+func (*fastFakeConn) RemoteAddr() net.Addr                 { return &FakeAddr{} }
+func (*fastFakeConn) LocalAddr() net.Addr                  { return &FakeAddr{} }
+func (*fastFakeConn) SetDeadline(t time.Time) error        { return nil }
+func (*fastFakeConn) SetReadDeadline(t time.Time) error    { return nil }
+func (*fastFakeConn) SetWriteDeadline(t time.Time) error   { return nil }
+func (*fastFakeConn) ConnectionState() tls.ConnectionState { return tls.ConnectionState{} }
+
+func BenchmarkGig(b *testing.B) {
+	var (
+		ok   = []byte("ok")
+		g    = New()
+		conn fastFakeConn
+		ctx  = g.ctxpool.New()
+		buf  = g.bufpool.New()
+	)
+
+	// pre-alloc 1 context and buffer to avoid their allocation during benchmarking
+	g.ctxpool.New = func() interface{} { return ctx }
+	g.bufpool.New = func() interface{} { return buf }
+
+	g.HidePort = true
+	g.HideBanner = true
+
+	g.Handle("/", func(c Context) error {
+		return c.GeminiBlob(ok)
+	})
+
+	go func() {
+		_ = g.Run("127.0.0.1:1965", "_fixture/certs/cert.pem", "_fixture/certs/key.pem")
+	}()
+	time.Sleep(200 * time.Millisecond)
+
+	defer g.Close()
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for n := 0; n < b.N; n++ {
+		g.handleRequest(&conn)
+	}
 }

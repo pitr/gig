@@ -54,7 +54,8 @@ type (
 		router        *router
 		listener      net.Listener
 		addr          string
-		pool          sync.Pool
+		ctxpool       sync.Pool
+		bufpool       sync.Pool
 		doneChan      chan struct{}
 		closeOnce     sync.Once
 		mu            sync.Mutex
@@ -152,6 +153,11 @@ var (
 	ErrInvalidCertOrKeyType  = errors.New("invalid cert or key type, must be string or []byte")
 
 	ErrServerClosed = errors.New("gemini: Server closed")
+
+	responseUnknownError   = []byte(fmt.Sprintf("%d %s\r\n", StatusBadRequest, "Unknown error reading request!"))
+	responseRequestTooLong = []byte(fmt.Sprintf("%d %s\r\n", StatusBadRequest, "Request too long!"))
+	responseBadURL         = []byte(fmt.Sprintf("%d %s\r\n", StatusBadRequest, "Error parsing URL!"))
+	responseBadSchema      = []byte(fmt.Sprintf("%d %s\r\n", StatusBadRequest, "No proxying to non-Gemini content!"))
 )
 
 // Error handlers.
@@ -197,9 +203,8 @@ func New() *Gig {
 		doneChan: make(chan struct{}),
 	}
 	g.GeminiErrorHandler = DefaultGeminiErrorHandler
-	g.pool.New = func() interface{} {
-		return g.newContext(nil, nil, "", nil)
-	}
+	g.ctxpool.New = func() interface{} { return g.newContext(nil, nil, "", nil) }
+	g.bufpool.New = func() interface{} { return bufio.NewReaderSize(nil, 1024) }
 	g.router = newRouter(g)
 
 	return g
@@ -215,7 +220,7 @@ func Default() *Gig {
 	return g
 }
 
-func (g *Gig) newContext(c net.Conn, u *url.URL, requestURI string, tls *tls.ConnectionState) Context {
+func (g *Gig) newContext(c tlsconn, u *url.URL, requestURI string, tls *tls.ConnectionState) Context {
 	return &context{
 		conn:       c,
 		TLS:        tls,
@@ -366,8 +371,8 @@ func (g *Gig) ServeGemini(c Context) {
 		// Acquire context from correct Gig and use it instead.
 		orig := c.(*context)
 
-		ctx := g.pool.Get().(*context)
-		defer g.pool.Put(ctx)
+		ctx := g.ctxpool.Get().(*context)
+		defer g.ctxpool.Put(ctx)
 
 		ctx.reset(orig.conn, orig.u, orig.requestURI, orig.TLS)
 
@@ -520,7 +525,13 @@ func (g *Gig) serve() error {
 	}
 }
 
-func (g *Gig) handleRequest(conn *tls.Conn) {
+// tlsconn wraps every necessary method from *tls.Conn, so it can be stubbed.
+type tlsconn interface {
+	net.Conn
+	ConnectionState() tls.ConnectionState
+}
+
+func (g *Gig) handleRequest(conn tlsconn) {
 	defer conn.Close()
 
 	if d := g.ReadTimeout; d != 0 {
@@ -530,13 +541,17 @@ func (g *Gig) handleRequest(conn *tls.Conn) {
 		}
 	}
 
-	reader := bufio.NewReaderSize(conn, 1024)
+	// Acquire reader
+	reader := g.bufpool.Get().(*bufio.Reader)
+	defer g.bufpool.Put(reader)
+
+	reader.Reset(conn)
 	request, overflow, err := reader.ReadLine()
 
 	if overflow {
 		debugPrintf("gemini: request overflow")
 
-		_, _ = conn.Write([]byte(fmt.Sprintf("%d %s\r\n", StatusBadRequest, "Request too long!")))
+		_, _ = conn.Write(responseRequestTooLong)
 
 		return
 	} else if err != nil {
@@ -544,9 +559,10 @@ func (g *Gig) handleRequest(conn *tls.Conn) {
 			debugPrintf("gemini: EOF reading from client, read %d bytes", len(request))
 			return
 		}
+
 		debugPrintf("gemini: unknown error reading request header: %s", err)
 
-		_, _ = conn.Write([]byte(fmt.Sprintf("%d %s\r\n", StatusBadRequest, "Unknown error reading request!")))
+		_, _ = conn.Write(responseUnknownError)
 
 		return
 	}
@@ -557,7 +573,7 @@ func (g *Gig) handleRequest(conn *tls.Conn) {
 	if err != nil {
 		debugPrintf("gemini: invalid request url: %s", err)
 
-		_, _ = conn.Write([]byte(fmt.Sprintf("%d %s\r\n", StatusBadRequest, "Error parsing URL!")))
+		_, _ = conn.Write(responseBadURL)
 
 		return
 	}
@@ -569,7 +585,7 @@ func (g *Gig) handleRequest(conn *tls.Conn) {
 	if URL.Scheme != "gemini" {
 		debugPrintf("gemini: non-gemini scheme: %s", header)
 
-		_, _ = conn.Write([]byte(fmt.Sprintf("%d %s\r\n", StatusBadRequest, "No proxying to non-Gemini content!")))
+		_, _ = conn.Write(responseBadSchema)
 
 		return
 	}
@@ -581,17 +597,16 @@ func (g *Gig) handleRequest(conn *tls.Conn) {
 		}
 	}
 
-	tlsState := new(tls.ConnectionState)
-	*tlsState = conn.ConnectionState()
+	tlsState := conn.ConnectionState()
 
 	// Acquire context
-	c := g.pool.Get().(*context)
-	c.reset(conn, URL, header, tlsState)
+	c := g.ctxpool.Get().(*context)
+	c.reset(conn, URL, header, &tlsState)
 
 	g.ServeGemini(c)
 
 	// Release context
-	g.pool.Put(c)
+	g.ctxpool.Put(c)
 }
 
 // Close immediately stops the server.

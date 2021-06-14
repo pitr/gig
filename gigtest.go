@@ -60,6 +60,9 @@ func (c *FakeConn) SetReadDeadline(t time.Time) error { return nil }
 // SetWriteDeadline always returns nil.
 func (c *FakeConn) SetWriteDeadline(t time.Time) error { return nil }
 
+// ConnectionState always returns nil.
+func (c *FakeConn) ConnectionState() tls.ConnectionState { return tls.ConnectionState{} }
+
 // NewFakeContext returns Context that writes to FakeConn.
 func (g *Gig) NewFakeContext(uri string, tlsState *tls.ConnectionState) (Context, *FakeConn) {
 	u, err := url.Parse(uri)
