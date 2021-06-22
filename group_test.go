@@ -47,6 +47,9 @@ func TestGroupStatic(t *testing.T) {
 	b = request("/group/images", gig)
 	is.Equal("51 Not Found\r\n", b)
 
+	b = request("/group/images/", gig)
+	is.Equal("20 text/gemini\r\n# Listing /group/images/\n\n=> /group/images/walle.png walle.png [ 219.9kB ]\n", b)
+
 	// Directory with index.gmi
 	g.Static("/d", "_fixture")
 

@@ -4,7 +4,7 @@ coverage.txt:
 test: coverage.txt
 	golint -set_exit_status .
 	go test -race .
-	golangci-lint run -E asciicheck -E bodyclose -E depguard -E dogsled -E dupl -E gochecknoinits -E goconst -E gocritic -E godot -E godox -E gofmt -E goimports -E golint -E gomodguard -E goprintffuncname -E interfacer -E maligned -E misspell -E nolintlint -E prealloc -E rowserrcheck -E stylecheck -E unconvert -E unparam -E whitespace -E wsl
+	golangci-lint run -E asciicheck -E bodyclose -E depguard -E dogsled -E dupl -E gochecknoinits -E goconst -E gocritic -E godot -E godox -E gofmt -E goimports -E revive -E gomodguard -E goprintffuncname -E misspell -E nolintlint -E prealloc -E rowserrcheck -E stylecheck -E unconvert -E unparam -E whitespace -E wsl
 
 bench:
 	go test -run=nothing -bench=.

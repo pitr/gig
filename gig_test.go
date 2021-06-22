@@ -33,35 +33,40 @@ func TestGigStatic(t *testing.T) {
 	g := New()
 
 	// OK
-	g.Static("/images", "_fixture/images")
-	b := request("/images/walle.png", g)
+	g.Static("/images_ok", "_fixture/images")
+	b := request("/images_ok/walle.png", g)
 	is.True(strings.HasPrefix(b, "20 image/png\r\n"))
 
-	// No file
-	g.Static("/images", "_fixture/scripts")
-	b = request("/images", g)
+	// Empty root
+	g.Static("/empty_root", "")
+	b = request("/empty_root/_fixture/images/walle.png", g)
+	is.True(strings.HasPrefix(b, "20 image/png\r\n"))
+
+	// Missing file
+	g.Static("/images_none", "_fixture/missing")
+	b = request("/images_none/", g)
+	is.Equal("51 Not Found\r\n", b)
+	b = request("/images_none/walle.png", g)
 	is.Equal("51 Not Found\r\n", b)
 
-	// Directory
-	g.Static("/images", "_fixture/images")
-	b = request("/images", g)
-	is.Equal("51 Not Found\r\n", b)
+	// Directory Listing
+	g.Static("/dir_no_index", "_fixture/folder")
+	b = request("/dir_no_index/", g)
+	is.Equal("20 text/gemini\r\n# Listing /dir_no_index/\n\n=> /dir_no_index/about.gmi about.gmi [ 29B ]\n=> /dir_no_index/another.blah another.blah [ 14B ]\n", b)
 
-	// Directory with index.gmi
-	g.Static("/d", "_fixture")
-	b = request("/d/", g)
+	// Directory Listing with index.gmi
+	g.Static("/dir", "_fixture")
+	b = request("/dir/", g)
 	is.Equal("20 text/gemini\r\n# Hello from gig\n\n=> / 🏠 Home\n", b)
-
-	// Sub-directory with index.gmi
-	b = request("/d/folder", g)
-	is.Equal("20 text/gemini\r\n# Listing /d/folder\n\n=> /d/folder/about.gmi about.gmi [ 29B ]\n=> /d/folder/another.blah another.blah [ 14B ]\n", b)
+	b = request("/dir/folder", g)
+	is.Equal("20 text/gemini\r\n# Listing /dir/folder\n\n=> /dir/folder/about.gmi about.gmi [ 29B ]\n=> /dir/folder/another.blah another.blah [ 14B ]\n", b)
 
 	// File without known mime
-	b = request("/d/folder/another.blah", g)
+	b = request("/dir/folder/another.blah", g)
 	is.Equal("20 octet/stream\r\n# Another page", b)
 
 	// Escape
-	b = request("/d/../../../../../../../../etc/profile", g)
+	b = request("/dir/../../../../../../../../etc/profile", g)
 	is.Equal(b, "51 Not Found\r\n")
 }
 
@@ -72,6 +77,10 @@ func TestGigFile(t *testing.T) {
 	g.File("/walle", "_fixture/images/walle.png")
 	b := request("/walle", g)
 	is.True(strings.HasPrefix(b, "20 "))
+
+	g.File("/missing", "_fixture/images/johnny.png")
+	b = request("/missing", g)
+	is.Equal(b, "51 Not Found\r\n")
 }
 
 func TestGigMiddleware(t *testing.T) {
