@@ -252,8 +252,11 @@ func main() {
 func main() {
   g := gig.Default()
 
-  g.Static("/images", "images")
-  g.Static("/robots.txt", "files/robots.txt")
+  // Register /images/* to serve files in my_images/ folder.
+  // Requests to /images/ will show directory listing.
+  g.Static("/images", "my_images")
+
+  g.File("/robots.txt", "files/robots.txt")
 
   g.Run("my.crt", "my.key")
 }
