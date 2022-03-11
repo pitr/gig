@@ -77,6 +77,9 @@ type (
 		// TLSConfig is passed to tls.NewListener and needs to be modified
 		// before Run is called.
 		TLSConfig *tls.Config
+
+		// AllowProxying disables error on using other schemas than gemini://
+		AllowProxying bool
 	}
 
 	// Route contains a handler and information for matching against requests.
@@ -582,7 +585,7 @@ func (g *Gig) handleRequest(conn tlsconn) {
 		URL.Scheme = "gemini"
 	}
 
-	if URL.Scheme != "gemini" {
+	if !g.AllowProxying && URL.Scheme != "gemini" {
 		debugPrintf("gemini: non-gemini scheme: %s", header)
 
 		_, _ = conn.Write(responseBadSchema)
