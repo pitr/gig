@@ -100,7 +100,7 @@ func TestContext(t *testing.T) {
 
 	// Reset
 	c.Set("foe", "ban")
-	c.(*context).reset(nil, nil, "", nil)
+	c.(*context).reset(nil, nil, "", nil, nil)
 	is.Equal(0, len(c.(*context).store))
 	is.Equal("", c.Path())
 }
@@ -146,7 +146,7 @@ func TestContextGetParam(t *testing.T) {
 	is.Equal("", c.Param("bar"))
 
 	// shouldn't explode during Reset() afterwards!
-	c.(*context).reset(nil, nil, "", nil)
+	c.(*context).reset(nil, nil, "", nil, nil)
 }
 
 func TestContextFile(t *testing.T) {

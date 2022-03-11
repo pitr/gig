@@ -3,6 +3,7 @@ package gig
 import (
 	"crypto/tls"
 	"errors"
+	"io"
 	"net"
 	"net/url"
 	"time"
@@ -16,6 +17,7 @@ type (
 	FakeConn struct {
 		FailAfter int
 		Written   string
+		Reader    io.Reader
 	}
 )
 
@@ -25,8 +27,15 @@ func (a *FakeAddr) Network() string { return "tcp" }
 // String returns dummy data.
 func (a *FakeAddr) String() string { return "192.0.2.1:25" }
 
-// Read always returns success.
-func (c *FakeConn) Read(b []byte) (n int, err error) { return len(b), nil }
+// Read always returns success if Reader is nil, otherwise Read is delegated
+// to the FakeConn reader.
+func (c *FakeConn) Read(b []byte) (n int, err error) {
+	if c.Reader != nil {
+		return c.Reader.Read(b)
+	}
+
+	return len(b), nil
+}
 
 // Write records bytes written and fails after FailAfter bytes.
 func (c *FakeConn) Write(b []byte) (n int, err error) {
@@ -63,14 +72,29 @@ func (c *FakeConn) SetWriteDeadline(t time.Time) error { return nil }
 // ConnectionState always returns nil.
 func (c *FakeConn) ConnectionState() tls.ConnectionState { return tls.ConnectionState{} }
 
+type FakeOpt func(Context, *FakeConn)
+
+// WithFakeReader adds reader to the context and connection.
+func WithFakeReader(r io.Reader) FakeOpt {
+	return func(c Context, f *FakeConn) {
+		f.Reader = r
+		c.(*context).reader = r
+	}
+}
+
 // NewFakeContext returns Context that writes to FakeConn.
-func (g *Gig) NewFakeContext(uri string, tlsState *tls.ConnectionState) (Context, *FakeConn) {
+func (g *Gig) NewFakeContext(uri string, tlsState *tls.ConnectionState, opts ...FakeOpt) (Context, *FakeConn) {
 	u, err := url.Parse(uri)
 	if err != nil {
 		panic(err)
 	}
 
 	conn := &FakeConn{}
+	ctx := g.newContext(conn, u, uri, tlsState)
 
-	return g.newContext(conn, u, uri, tlsState), conn
+	for _, o := range opts {
+		o(ctx, conn)
+	}
+
+	return ctx, conn
 }

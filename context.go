@@ -49,6 +49,13 @@ type (
 		// to a server. Usually the URL() or Path() should be used instead.
 		RequestURI() string
 
+		// Reader returns request connection reader that can be
+		// used to read data that client sent after Gemini request.
+		// This feature is necessary to implement Gemini extensions
+		// like Titan protocol. Spec compliant Gemini server should
+		// ignore all data after the request.
+		Reader() io.Reader
+
 		// Param returns path parameter by name.
 		Param(name string) string
 
@@ -98,6 +105,7 @@ type (
 		conn       tlsconn
 		TLS        *tls.ConnectionState
 		u          *url.URL
+		reader     io.Reader
 		response   *Response
 		path       string
 		requestURI string
@@ -166,6 +174,10 @@ func (c *context) Param(name string) string {
 
 func (c *context) QueryString() (string, error) {
 	return url.QueryUnescape(c.u.RawQuery)
+}
+
+func (c *context) Reader() io.Reader {
+	return c.reader
 }
 
 func (c *context) Get(key string) interface{} {
@@ -355,12 +367,13 @@ func (c *context) Handler() HandlerFunc {
 	return c.handler
 }
 
-func (c *context) reset(conn tlsconn, u *url.URL, requestURI string, tls *tls.ConnectionState) {
+func (c *context) reset(conn tlsconn, u *url.URL, requestURI string, reader io.Reader, tls *tls.ConnectionState) {
 	c.conn = conn
 	c.TLS = tls
 	c.u = u
 	c.requestURI = requestURI
 	c.response.reset(conn)
+	c.reader = reader
 	c.handler = NotFoundHandler
 	c.store = nil
 	c.path = ""

@@ -374,7 +374,7 @@ func (g *Gig) ServeGemini(c Context) {
 		ctx := g.ctxpool.Get().(*context)
 		defer g.ctxpool.Put(ctx)
 
-		ctx.reset(orig.conn, orig.u, orig.requestURI, orig.TLS)
+		ctx.reset(orig.conn, orig.u, orig.requestURI, orig.reader, orig.TLS)
 
 		c = ctx
 	}
@@ -601,7 +601,7 @@ func (g *Gig) handleRequest(conn tlsconn) {
 
 	// Acquire context
 	c := g.ctxpool.Get().(*context)
-	c.reset(conn, URL, header, &tlsState)
+	c.reset(conn, URL, header, reader, &tlsState)
 
 	g.ServeGemini(c)
 
