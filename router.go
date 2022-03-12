@@ -227,6 +227,11 @@ func (n *node) findChildByKind(t kind) *node {
 // find lookup a handler registered for path. It also parses URL for path
 // parameters and load them into context.
 func (r *router) find(path string, c Context) {
+	i := strings.Index(path, ";")
+	if i != -1 {
+		path = path[0:i]
+	}
+
 	ctx := c.(*context)
 	ctx.path = path
 	cn := r.tree // Current node as root
