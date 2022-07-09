@@ -40,6 +40,7 @@ API is subject to change until v1.0
    * [Custom port](#custom-port)
    * [Custom TLS config](#custom-tls-config)
    * [Testing](#testing)
+   * [Titan protocol](#titan-protocol)
 * [Who uses Gig](#who-uses-gig)
 * [Benchmarks](#benchmarks)
 * [Contribute](#contribute)
@@ -529,6 +530,56 @@ func TestCertificate(t *testing.T) {
   }
 }
 ```
+
+### Titan Protocol
+
+[Titan] protocol is supported as middleware. Example titan server can be found
+in `examples/titan` directory.
+
+To use handle titan requests you must set `AllowProxying` property of gig to true.
+
+```go
+g := gig.Default()
+g.AllowProxying = true
+```
+
+It is recommenced to set request read timeout to non zero value:
+
+```go
+g.ReadTimeout = time.Second * 10
+```
+
+When creating middleware you must provide maximal request size in
+bytes. Attempt to send bigger files than the limit will result in bad
+request response.
+
+```go
+g.Use(gig.Titan(1024))
+```
+
+Titan middleware detects requests using `titan://` scheme and stores information about
+it in request's context.
+
+| key   | type   | description                             |
+|-------|--------|-----------------------------------------|
+| titan | bool   | true if request is titan request        |
+| size  | int    | size of received file                   |
+| mime  | string | mime type as described in [Titan] spec  |
+| token | string | auth token as described in [Titan] spec |
+
+The `titan` key in a context can be used to implement handlers that can
+handle both titan and gemini requests.
+
+Please note that if client sends less data than indicated by size parameter
+then request should result in error response.
+
+There are two utility function provided to make writing Titan servers easier:
+
+- `TitanReadFull`: reads whole request into a buffer. Takes care of case
+when client sends less data than expeted.
+- `TitanRedirect`: redirects client to the gemini resource uploaded in the request.
+
+[Titan]: https://communitywiki.org/wiki/Titan
 
 ## Who uses Gig
 

@@ -77,6 +77,9 @@ type (
 		// TLSConfig is passed to tls.NewListener and needs to be modified
 		// before Run is called.
 		TLSConfig *tls.Config
+
+		// AllowProxying disables error on using other schemas than gemini://
+		AllowProxying bool
 	}
 
 	// Route contains a handler and information for matching against requests.
@@ -374,7 +377,7 @@ func (g *Gig) ServeGemini(c Context) {
 		ctx := g.ctxpool.Get().(*context)
 		defer g.ctxpool.Put(ctx)
 
-		ctx.reset(orig.conn, orig.u, orig.requestURI, orig.TLS)
+		ctx.reset(orig.conn, orig.u, orig.requestURI, orig.reader, orig.TLS)
 
 		c = ctx
 	}
@@ -582,7 +585,7 @@ func (g *Gig) handleRequest(conn tlsconn) {
 		URL.Scheme = "gemini"
 	}
 
-	if URL.Scheme != "gemini" {
+	if !g.AllowProxying && URL.Scheme != "gemini" {
 		debugPrintf("gemini: non-gemini scheme: %s", header)
 
 		_, _ = conn.Write(responseBadSchema)
@@ -601,7 +604,7 @@ func (g *Gig) handleRequest(conn tlsconn) {
 
 	// Acquire context
 	c := g.ctxpool.Get().(*context)
-	c.reset(conn, URL, header, &tlsState)
+	c.reset(conn, URL, header, reader, &tlsState)
 
 	g.ServeGemini(c)
 

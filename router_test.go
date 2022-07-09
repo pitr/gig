@@ -1210,6 +1210,14 @@ func TestRouterParam1466(t *testing.T) {
 	is.Equal("sharewithme", c.Param("username"))
 	is.Equal("self", c.Param("type"))
 
+	r.find("/users/sharewithme/uploads/self;mime=text/plain;size=24", c)
+	is.Equal("sharewithme", c.Param("username"))
+	is.Equal("self", c.Param("type"))
+
+	r.find("/users/sharewithme/uploads/self?foo=1", c)
+	is.Equal("sharewithme", c.Param("username"))
+	is.Equal("self?foo=1", c.Param("type"))
+
 	c = g.newContext(nil, nil, "", nil).(*context)
 	r.find("/users/ajitem/uploads/self", c)
 	is.Equal("ajitem", c.Param("username"))
